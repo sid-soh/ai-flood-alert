@@ -1,12 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+import 'leaflet-routing-machine';
+import { getNearestEvacuationPoint } from './utils/GetNearestEvacuationPoint';
 
 const MapComponent = () => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
   const circleRef = useRef(null);
+  const evacuationMarkerRef = useRef(null);
   const geoWatchIdRef = useRef(null);
 
   useEffect(() => {
@@ -21,7 +25,7 @@ const MapComponent = () => {
     }
 
     // Success callback
-    const success = (pos) => {
+    const success = async (pos) => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       const acc = pos.coords.accuracy;
@@ -32,13 +36,26 @@ const MapComponent = () => {
       if (markerRef.current) {
         map.removeLayer(markerRef.current);
         map.removeLayer(circleRef.current);
+        map.removeLayer(evacuationMarkerRef.current);
       }
 
       // Add new marker and circle
       markerRef.current = L.marker([lat, lng]).addTo(map);
       circleRef.current = L.circle([lat, lng], { radius: acc }).addTo(map);
 
-      map.fitBounds(circleRef.current.getBounds());
+      const nearest = await getNearestEvacuationPoint(lat, lng);
+
+      const bounds = L.latLngBounds([
+        [lat, lng],                   // User's location
+        [nearest.lat, nearest.lon],  // Evacuation point
+        ]);
+
+      map.fitBounds(bounds, { padding: [30, 30] });
+      
+      if (nearest) {
+        evacuationMarkerRef.current = L.marker([nearest.lat, nearest.lon]).addTo(map);
+      }
+      
     };
 
     // Error callback
@@ -67,8 +84,23 @@ const MapComponent = () => {
   }, []);
 
   return (
-    <div id="map" ref={mapRef} style={{ height: '500px', width: '100%' }} />
+    <div id="map" ref={mapRef} />
   );
 };
+
+/*
+*   Routing: Using Overpass API to search for certain keywords on the map
+*   Keywords include: emergency=assembly_point, emergency=shelter, amenity=shelter + shelter_type=emergency
+*   Keywords may include: building=public, building=school, landuse=recreation_ground, leisure=stadium
+*
+*   To look at the topography of the map to determine whether an area is safe for flooding:
+*   OpenElevationAPI
+*
+*   When an area is affected, the AI will estimate the area of effect
+*   Destination points will be queried through Overpass API
+*   These will be marked with the distance from user and elevation data
+*   AI will determine the suitable action, which point to go to 
+*   Routing TBD
+*/
 
 export default MapComponent;

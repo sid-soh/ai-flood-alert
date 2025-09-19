@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import MapComponent from './MapComponent';
+import EvacuationFinder from './EvacuationFinder';
 
 const title = (
   <h1>Live Map</h1>
@@ -25,6 +26,14 @@ function DisplayMap() {
   );
 }
 
+function GetEvacuationPoint() {
+return (
+  <div>
+    <EvacuationFinder />
+  </div>
+);
+}
+
 createRoot(document.getElementById('meow')).render(
   /* mycar.show() */
   title
@@ -35,5 +44,5 @@ createRoot(document.getElementById('map')).render(
 )
 
 createRoot(document.getElementById('woof')).render(
-  MyList()
+  GetEvacuationPoint()
 )

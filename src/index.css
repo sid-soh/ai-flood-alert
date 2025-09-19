@@ -104,8 +104,8 @@ button:focus-visible {
   width: 10%;
 }
 
-#nav-title {
-  width: 10%;
+#content {
+  padding-left: 20px;
 }
 
 #map {
