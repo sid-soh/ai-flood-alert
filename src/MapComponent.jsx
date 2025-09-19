@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import EvacuationMarkerImg from '../public/evacuation-icon-2x.png'; 
+import EvacuationMarkerShadow from '../public/evacuation-icon-shadow.png'; 
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import 'leaflet-routing-machine';
 import { getNearestEvacuationPoint } from './utils/GetNearestEvacuationPoint';
@@ -12,6 +14,17 @@ const MapComponent = () => {
   const circleRef = useRef(null);
   const evacuationMarkerRef = useRef(null);
   const geoWatchIdRef = useRef(null);
+
+  // Custom icon for evacuation point
+  const evacuationIcon = L.icon({
+    iconUrl: EvacuationMarkerImg,
+    iconSize: [25, 41], 
+    iconAnchor: [16, 32], // Point of the icon which corresponds to marker's location
+    popupAnchor: [0, -32], // Position of the popup relative to icon
+     shadowUrl: EvacuationMarkerShadow,
+    shadowSize: [30, 41],
+    shadowAnchor: [16, 32]
+  });
 
   useEffect(() => {
     // Initialize the map
@@ -53,7 +66,7 @@ const MapComponent = () => {
       map.fitBounds(bounds, { padding: [30, 30] });
       
       if (nearest) {
-        evacuationMarkerRef.current = L.marker([nearest.lat, nearest.lon]).addTo(map);
+        evacuationMarkerRef.current = L.marker([nearest.lat, nearest.lon], { icon: evacuationIcon }).addTo(map);
       }
       
     };
