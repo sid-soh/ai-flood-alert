@@ -88,6 +88,8 @@ const MapComponent = () => {
   );
 };
 
+export default MapComponent;
+
 /*
 *   Routing: Using Overpass API to search for certain keywords on the map
 *   Keywords include: emergency=assembly_point, emergency=shelter, amenity=shelter + shelter_type=emergency
@@ -102,5 +104,3 @@ const MapComponent = () => {
 *   AI will determine the suitable action, which point to go to 
 *   Routing TBD
 */
-
-export default MapComponent;

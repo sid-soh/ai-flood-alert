@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import MapComponent from './MapComponent';
-import EvacuationFinder from './EvacuationFinder';
+import EvacuationInfo from './EvacuationInfo';
 
 const title = (
   <h1>Live Map</h1>
@@ -26,10 +26,10 @@ function DisplayMap() {
   );
 }
 
-function GetEvacuationPoint() {
+function GetEvacuationInfo() {
 return (
   <div>
-    <EvacuationFinder />
+    <EvacuationInfo />
   </div>
 );
 }
@@ -44,5 +44,5 @@ createRoot(document.getElementById('map')).render(
 )
 
 createRoot(document.getElementById('woof')).render(
-  GetEvacuationPoint()
+  GetEvacuationInfo()
 )
