@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client'
+import MapComponent from './MapComponent';
 
 const title = (
   <h1>Live Map</h1>
@@ -17,12 +18,20 @@ function MyList() {
 }
 
 function DisplayMap() {
-  
+  return (
+    <div>
+      <MapComponent />
+    </div>
+  );
 }
 
 createRoot(document.getElementById('meow')).render(
   /* mycar.show() */
   title
+)
+
+createRoot(document.getElementById('map')).render(
+  DisplayMap()
 )
 
 createRoot(document.getElementById('woof')).render(
