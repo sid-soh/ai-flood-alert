@@ -8,8 +8,7 @@ DROP TABLE IF EXISTS source;
 DROP TABLE IF EXISTS location;
 DROP TABLE IF EXISTS keyword;
 
--- Create base tables first (no dependencies)
-
+-- Create base tables first (no dependencies) ---
 -- Keywords table
 CREATE TABLE keyword (
     keyword_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -28,7 +27,7 @@ CREATE TABLE location (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Sources table (updated to match Python code)
+-- Sources table
 CREATE TABLE source (
     source_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -38,9 +37,8 @@ CREATE TABLE source (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create dependent tables
-
--- Social posts table (updated to match Python code)
+-- Create dependent tables ---
+-- Social posts table
 CREATE TABLE x_post (
     x_post_id INT AUTO_INCREMENT PRIMARY KEY,
     source_id INT NOT NULL,
@@ -61,7 +59,7 @@ CREATE TABLE x_post (
     CHECK (credibility_score >= 0 AND credibility_score <= 100)
 );
 
--- Meteorological alerts table
+-- Meteorological alerts table with unique constraint
 CREATE TABLE meteorological_alert (
     alert_id INT AUTO_INCREMENT PRIMARY KEY,
     location_id INT,
@@ -73,7 +71,8 @@ CREATE TABLE meteorological_alert (
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     source_url VARCHAR(500),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (location_id) REFERENCES location(location_id)
+    FOREIGN KEY (location_id) REFERENCES location(location_id),
+    UNIQUE KEY unique_location_date (location_id, issued_at)
 );
 
 -- Official announcements table
