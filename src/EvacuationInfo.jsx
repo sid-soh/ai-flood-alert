@@ -1,43 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { getNearestEvacuationPoint } from './utils/GetNearestEvacuationPoint';
+import React, { useState, useEffect } from 'react';
 
 const EvacuationInfo = () => {
-  const [userLocation, setUserLocation] = useState(null);
   const [evacuationPoint, setEvacuationPoint] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchInfo = async () => {
-      if (!navigator.geolocation) {
-        setError('Geolocation not supported.');
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setUserLocation({ latitude, longitude });
-
-        const point = await getNearestEvacuationPoint(latitude, longitude);
-        if (point) {
-          setEvacuationPoint(point);
-        } else {
-          setError('No evacuation point found nearby.');
-        }
-      }, (err) => {
-        setError('Location access denied.');
-      });
+    const handleEvacuationFound = (event) => {
+      setEvacuationPoint(event.detail);
     };
 
-    fetchInfo();
+    window.addEventListener('evacuationFound', handleEvacuationFound);
+    
+    return () => {
+      window.removeEventListener('evacuationFound', handleEvacuationFound);
+    };
   }, []);
 
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
-  if (!evacuationPoint) return <p>Finding nearest evacuation point...</p>;
+  if (!evacuationPoint) return <p>Click "Find Evacuation Route" to see nearest evacuation point.</p>;
 
   const { lat, lon, dist, tags } = evacuationPoint;
 
   return (
-    <div>
+    <div id="evac-info">
       <h3>Nearest Evacuation Point</h3>
       <p><strong>Latitude:</strong> {lat}</p>
       <p><strong>Longitude:</strong> {lon}</p>
@@ -50,18 +35,3 @@ const EvacuationInfo = () => {
 
 export default EvacuationInfo;
 
-/*
-const EvacuationInfo = ({ evacuationPoint }) => {
-  if (!evacuationPoint) return <div>No evacuation point selected yet.</div>;
-
-  return (
-    <div>
-      <h2>Narest Evacuation Point</h2>
-      <p>Name: {evacuationPoint.tags.name}</p>
-      <p>Distance: {(evacuationPoint.dist / 1000).toFixed(2)} km</p>
-      <p>Latitude: {evacuationPoint.lat}</p>
-      <p>Longitude: {evacuationPoint.lon}</p>
-    </div>
-  );
-};
-*/

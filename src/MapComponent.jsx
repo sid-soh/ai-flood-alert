@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import EvacuationMarkerImg from '../public/evacuation-icon-2x.png'; 
@@ -14,6 +14,8 @@ const MapComponent = () => {
   const circleRef = useRef(null);
   const evacuationMarkerRef = useRef(null);
   const geoWatchIdRef = useRef(null);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationMode, setLocationMode] = useState('manual');
 
   // Custom icon for evacuation point
   const evacuationIcon = L.icon({
@@ -29,72 +31,135 @@ const MapComponent = () => {
   useEffect(() => {
     // Initialize the map
     if (!mapInstanceRef.current) {
-      mapInstanceRef.current = L.map(mapRef.current).setView([5.518, 116.768], 13);
+      mapInstanceRef.current = L.map(mapRef.current).setView([5.96941, 116.09044], 13);
 
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       }).addTo(mapInstanceRef.current);
+
+      // Add initial Sabah marker
+      markerRef.current = L.marker([5.96941, 116.09044]).addTo(mapInstanceRef.current).bindPopup('Sabah (Flood Crisis)');
+      setUserLocation({ lat: 5.96941, lng: 116.09044 });
     }
 
-    // Success callback
-    const success = async (pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      const acc = pos.coords.accuracy;
+    const setMapLocation = (location) => {
+      if (location === 'gps') {
+        setLocationMode('gps');
+        startGPSTracking();
+      } else {
+        setLocationMode('manual');
+        if (geoWatchIdRef.current) {
+          navigator.geolocation.clearWatch(geoWatchIdRef.current);
+          geoWatchIdRef.current = null;
+        }
+        updateMapLocation(location.lat, location.lng, location.name);
+      }
+    };
 
+    const updateMapLocation = (lat, lng, name = 'Selected Location') => {
       const map = mapInstanceRef.current;
-
-      // Remove old marker/circle
+      
+      // Remove old markers
       if (markerRef.current) {
         map.removeLayer(markerRef.current);
-        map.removeLayer(circleRef.current);
-        map.removeLayer(evacuationMarkerRef.current);
+        if (circleRef.current) map.removeLayer(circleRef.current);
       }
 
-      // Add new marker and circle
-      markerRef.current = L.marker([lat, lng]).addTo(map);
-      circleRef.current = L.circle([lat, lng], { radius: acc }).addTo(map);
-
-      const nearest = await getNearestEvacuationPoint(lat, lng);
-
-      const bounds = L.latLngBounds([
-        [lat, lng],                   // User's location
-        [nearest.lat, nearest.lon],  // Evacuation point
-        ]);
-
-      map.fitBounds(bounds, { padding: [30, 30] });
+      // Add new marker
+      markerRef.current = L.marker([lat, lng]).addTo(map).bindPopup(name);
       
-      if (nearest) {
-        evacuationMarkerRef.current = L.marker([nearest.lat, nearest.lon], { icon: evacuationIcon }).addTo(map);
-      }
+      // Store location
+      setUserLocation({ lat, lng });
       
+      map.setView([lat, lng], 13);
     };
 
-    // Error callback
-    const error = (err) => {
-      if (err.code === 1) {
-        alert('Please allow geolocation access.');
+    const startGPSTracking = () => {
+      const success = (pos) => {
+        updateMapLocation(pos.coords.latitude, pos.coords.longitude, 'Your Location');
+        
+        // Add accuracy circle for GPS
+        if (circleRef.current) {
+          mapInstanceRef.current.removeLayer(circleRef.current);
+        }
+        circleRef.current = L.circle([pos.coords.latitude, pos.coords.longitude], { 
+          radius: pos.coords.accuracy 
+        }).addTo(mapInstanceRef.current);
+      };
+
+      const error = (err) => {
+        if (err.code === 1) {
+          alert('Please allow geolocation access.');
+        }
+      };
+
+      if (navigator.geolocation) {
+        geoWatchIdRef.current = navigator.geolocation.watchPosition(success, error);
       }
     };
 
-    // Start watching user's location
-    if (navigator.geolocation) {
-      geoWatchIdRef.current = navigator.geolocation.watchPosition(success, error);
+    // Expose function globally
+    window.setMapLocation = setMapLocation;
+
+    // Only start GPS if in GPS mode
+    if (locationMode === 'gps') {
+      startGPSTracking();
     }
 
-    // Cleanup function
     return () => {
       if (geoWatchIdRef.current) {
         navigator.geolocation.clearWatch(geoWatchIdRef.current);
       }
-
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
+      delete window.setMapLocation;
     };
-  }, []);
+  }, [locationMode]);
+
+  useEffect(() => {
+    // Expose function globally for HTML button
+    const showEvacuationRoute = async () => {
+      if (!userLocation) return;
+      
+      const map = mapInstanceRef.current;
+      const { lat, lng } = userLocation;
+      
+      try {
+        const nearest = await getNearestEvacuationPoint(lat, lng);
+        
+        if (nearest) {
+          // Remove existing evacuation marker
+          if (evacuationMarkerRef.current) {
+            map.removeLayer(evacuationMarkerRef.current);
+          }
+          
+          // Add evacuation marker
+          evacuationMarkerRef.current = L.marker([nearest.lat, nearest.lon], { icon: evacuationIcon }).addTo(map);
+          
+          // Fit bounds to show both user and evacuation point
+          const bounds = L.latLngBounds([
+            [lat, lng],
+            [nearest.lat, nearest.lon]
+          ]);
+          map.fitBounds(bounds, { padding: [30, 30] });
+          
+          // Trigger evacuation info update via custom event
+          window.dispatchEvent(new CustomEvent('evacuationFound', { detail: nearest }));
+        }
+      } catch (error) {
+        console.error('Error finding evacuation point:', error);
+      }
+    };
+
+    window.showEvacuationRoute = showEvacuationRoute;
+
+    return () => {
+      delete window.showEvacuationRoute;
+    };
+  }, [userLocation]);
 
   return (
     <div id="map" ref={mapRef} />
@@ -114,6 +179,9 @@ export default MapComponent;
 *   When an area is affected, the AI will estimate the area of effect
 *   Destination points will be queried through Overpass API
 *   These will be marked with the distance from user and elevation data
+*   AI will determine the suitable action, which point to go to 
+*   Routing TBD
+*   e from user and elevation data
 *   AI will determine the suitable action, which point to go to 
 *   Routing TBD
 */

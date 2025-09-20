@@ -16,7 +16,7 @@
       <div id="empty"></div>
       <button id="nav-btn">Map</button>
       <button id="nav-btn">Call for help</button>
-      <button id="nav-btn">News</button>
+      <button id="nav-btn">News Dashboard</button>
       <button id="nav-btn">About</button>
     </div>
     <div id="content">
@@ -25,10 +25,7 @@
     <div id="map-container">
       <div id="map"></div>
       <div id="map-info">
-        <p>This map shows your location in real-time as well as the closest evacuation point to you.</p>
-        <p>
-          
-        </p>
+      
       </div>
     </div>
     
@@ -38,7 +35,19 @@
   </body>
 
   <script>
-
-  
+    // Navigation functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const navButtons = document.querySelectorAll('#nav-btn');
+      
+      navButtons.forEach((button, index) => {
+        button.addEventListener('click', function() {
+          if (index === 0) { // Map button
+            window.showPage && window.showPage('map');
+          } else if (index === 2) { // News Dashboard button
+            window.showPage && window.showPage('news');
+          }
+        });
+      });
+    });
   </script>
 </html>
