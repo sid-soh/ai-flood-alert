@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "description": "AI-powered evacuation route optimization using Amazon Bedrock and OSRM",
   "main": "index.js",
-  "type": "module",
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.450.0",
-    "node-fetch": "^3.3.0"
+    "@aws-sdk/client-bedrock-runtime": "^3.893.0",
+    "node-fetch": "^3.3.2"
   },
   "scripts": {
     "test": "node test.js"

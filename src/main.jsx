@@ -1,3 +1,4 @@
+import React from 'react';
 import { createRoot } from 'react-dom/client'
 import MapComponent from './MapComponent';
 import EvacuationInfo from './EvacuationInfo';
@@ -73,16 +74,57 @@ function LocationSelector() {
 }
 
 function GetEvacuationInfo() {
+  const [aiAnalysis, setAiAnalysis] = React.useState('');
+  
+  React.useEffect(() => {
+    const handleEvacuationFound = (event) => {
+      const routeInfo = event.detail.routeInfo;
+      if (routeInfo && routeInfo.warnings && routeInfo.warnings.length > 0) {
+        const aiText = routeInfo.warnings[0];
+        if (aiText.includes('AI Analysis:')) {
+          setAiAnalysis(aiText.replace('AI Analysis: ', ''));
+        } else {
+          setAiAnalysis(aiText);
+        }
+      }
+    };
+    
+    window.addEventListener('evacuationFound', handleEvacuationFound);
+    return () => window.removeEventListener('evacuationFound', handleEvacuationFound);
+  }, []);
+  
   return (
     <div>
       <button 
         onClick={() => window.showEvacuationRoute && window.showEvacuationRoute()}
         style={{
-          
+          padding: '10px 20px',
+          backgroundColor: '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          marginBottom: '15px'
         }}
       >
         Find Evacuation Route
       </button>
+      
+      {aiAnalysis && (
+        <div style={{
+          backgroundColor: '#f8f9fa',
+          border: '1px solid #dee2e6',
+          borderRadius: '4px',
+          padding: '15px',
+          marginBottom: '15px',
+          fontSize: '14px',
+          lineHeight: '1.5'
+        }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>AI Route Analysis</h4>
+          <p style={{ margin: 0, color: '#6c757d' }}>{aiAnalysis}</p>
+        </div>
+      )}
+      
       <EvacuationInfo />
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import EvacuationMarkerImg from '../public/evacuation-icon-2x.png'; 
+import MarkerShadow from '../public/user-marker-shadow.png'; 
 import EvacuationMarkerShadow from '../public/evacuation-icon-shadow.png'; 
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import 'leaflet-routing-machine';
@@ -18,15 +18,20 @@ const MapComponent = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [locationMode, setLocationMode] = useState('manual');
 
-  // Custom icon for evacuation point
-  const evacuationIcon = L.icon({
-    iconUrl: EvacuationMarkerImg,
-    iconSize: [25, 41], 
+  // Custom icon for regular marker 
+  const markerIcon = L.icon({
+    iconUrl: MarkerShadow,
+    iconSize: [34, 41], 
     iconAnchor: [16, 32], // Point of the icon which corresponds to marker's location
     popupAnchor: [0, -32], // Position of the popup relative to icon
-     shadowUrl: EvacuationMarkerShadow,
-    shadowSize: [30, 41],
-    shadowAnchor: [16, 32]
+  });
+
+  // Custom icon for evacuation point
+  const evacuationIcon = L.icon({
+    iconUrl: EvacuationMarkerShadow,
+    iconSize: [34, 41], 
+    iconAnchor: [16, 32], // Point of the icon which corresponds to marker's location
+    popupAnchor: [0, -32], // Position of the popup relative to icon
   });
 
   useEffect(() => {
@@ -40,7 +45,7 @@ const MapComponent = () => {
       }).addTo(mapInstanceRef.current);
 
       // Add initial Sabah marker
-      markerRef.current = L.marker([5.96941, 116.09044]).addTo(mapInstanceRef.current).bindPopup('Sabah (Flood Crisis)');
+      markerRef.current = L.marker([5.96941, 116.09044], { icon: markerIcon }).addTo(mapInstanceRef.current).bindPopup('Sabah (Flood Crisis)');
       setUserLocation({ lat: 5.96941, lng: 116.09044 });
     }
 
@@ -68,7 +73,7 @@ const MapComponent = () => {
       }
 
       // Add new marker
-      markerRef.current = L.marker([lat, lng]).addTo(map).bindPopup(name);
+      markerRef.current = L.marker([lat, lng], { icon: markerIcon }).addTo(map).bindPopup(name);
       
       // Store location
       setUserLocation({ lat, lng });
@@ -129,7 +134,9 @@ const MapComponent = () => {
       const { lat, lng } = userLocation;
       
       try {
+        console.log('Getting nearest evacuation point for:', lat, lng);
         const nearest = await getNearestEvacuationPoint(lat, lng);
+        console.log('Nearest evacuation point:', nearest);
         
         if (nearest) {
           // Remove existing evacuation marker and route
@@ -141,10 +148,13 @@ const MapComponent = () => {
           }
           
           // Get AI-optimized route from backend with OSRM
+          console.log('Calling API with:', [lat, lng], [nearest.lat, nearest.lon]);
           const routeData = await floodAnalysisAPI.getEvacuationRoute(
             [lat, lng], 
             [nearest.lat, nearest.lon]
           );
+          
+          console.log('API Response:', routeData); // Debug log
           
           // Add evacuation marker
           evacuationMarkerRef.current = L.marker([nearest.lat, nearest.lon], { icon: evacuationIcon }).addTo(map);

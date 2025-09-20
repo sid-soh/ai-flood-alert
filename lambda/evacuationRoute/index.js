@@ -1,14 +1,14 @@
-import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import fetch from 'node-fetch';
+const https = require('https');
+const { BedrockRuntimeClient, InvokeModelCommand } = require('@aws-sdk/client-bedrock-runtime');
 
-const bedrockClient = new BedrockRuntimeClient({ region: "us-east-1" });
-const OSRM_BASE_URL = 'https://router.project-osrm.org';
+const bedrockClient = new BedrockRuntimeClient({ region: 'us-east-1' });
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
   };
 
   if (event.httpMethod === 'OPTIONS') {
@@ -16,239 +16,195 @@ export const handler = async (event) => {
   }
 
   try {
-    const { start, end } = JSON.parse(event.body);
-
-    // 1. Get route context data
-    const routeData = await getRouteContext(start, end);
+    const { start, end } = JSON.parse(event.body || '{}');
+    console.log('Processing route from', start, 'to', end);
     
-    // 2. Optimize with Bedrock AI
-    const optimizedRoute = await optimizeWithBedrock(routeData);
+    // Get OSRM route
+    const osrmResult = await getOSRMRoute(start, end);
+    
+    if (osrmResult) {
+      // Enhance with AI analysis
+      const aiEnhancedResult = await enhanceWithBedrock(osrmResult, start, end);
+      console.log('AI-enhanced route successful');
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(aiEnhancedResult)
+      };
+    }
+    
+    // Fallback to direct route
+    console.log('Using fallback route');
+    const fallbackResult = {
+      osrmGeometry: {
+        type: 'LineString',
+        coordinates: [[start[1], start[0]], [end[1], end[0]]]
+      },
+      routeDistance: calculateDistance(start, end) * 1000,
+      routeDuration: 300,
+      riskLevel: 'HIGH',
+      warnings: ['Direct route - OSRM unavailable, avoid if possible'],
+      waypoints: [
+        { lat: start[0], lng: start[1] },
+        { lat: end[0], lng: end[1] }
+      ]
+    };
     
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify(optimizedRoute)
+      body: JSON.stringify(fallbackResult)
     };
-
+    
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Lambda error:', error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
-        error: 'Route optimization failed',
-        details: error.message,
-        waypoints: [
-          { lat: start?.[0] || 0, lng: start?.[1] || 0 },
-          { lat: end?.[0] || 0, lng: end?.[1] || 0 }
-        ],
+        error: error.message,
         riskLevel: "HIGH",
-        warnings: ["Service temporarily unavailable"]
+        warnings: ["Service error"]
       })
     };
   }
 };
 
-async function optimizeWithBedrock(routeData) {
-  const prompt = `
-You are an emergency evacuation routing expert. Analyze this data and recommend the SAFEST route:
-
-START: [${routeData.start[0]}, ${routeData.start[1]}]
-DESTINATION: [${routeData.end[0]}, ${routeData.end[1]}]
-FLOOD ZONES: ${JSON.stringify(routeData.floodZones)}
-AVAILABLE ROUTES: ${JSON.stringify(routeData.alternativeRoutes)}
-
-Consider:
-1. Avoid flooded areas completely
-2. Choose higher elevation roads
-3. Minimize travel time while prioritizing safety
-4. Account for current weather conditions
-
-Return ONLY valid JSON format:
-{
-  "waypoints": [
-    {"lat": ${routeData.start[0]}, "lng": ${routeData.start[1]}},
-    {"lat": ${routeData.end[0]}, "lng": ${routeData.end[1]}}
-  ],
-  "riskLevel": "LOW",
-  "warnings": ["Avoid main road due to flooding"],
-  "estimatedTime": "15 minutes",
-  "reasoning": "Route avoids flood zones and uses higher elevation roads"
-}
-`;
-
-  const command = new InvokeModelCommand({
-    modelId: "amazon.titan-text-express-v1",
-    body: JSON.stringify({
-      inputText: prompt,
-      textGenerationConfig: {
-        maxTokenCount: 1000,
-        temperature: 0.1,
-        topP: 0.9
-      }
-    })
-  });
-
-  try {
-    const response = await bedrockClient.send(command);
-    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-    
-    // Parse AI response with fallback
-    let aiResponse;
-    try {
-      const outputText = responseBody.results[0].outputText.trim();
-      // Extract JSON from AI response if wrapped in text
-      const jsonMatch = outputText.match(/\{[\s\S]*\}/);
-      const jsonText = jsonMatch ? jsonMatch[0] : outputText;
-      aiResponse = JSON.parse(jsonText);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError, 'Raw output:', responseBody.results[0].outputText);
-      throw parseError;
-    }
-    
-    // Enhance with OSRM route data if available
-    if (routeData.alternativeRoutes && routeData.alternativeRoutes.length > 0) {
-      const selectedRoute = routeData.alternativeRoutes.find(r => r.type === 'fastest') || routeData.alternativeRoutes[0];
-      aiResponse.osrmGeometry = selectedRoute.osrmData?.geometry;
-      aiResponse.routeDistance = selectedRoute.distance;
-      aiResponse.routeDuration = selectedRoute.duration;
-    }
-    
-    return aiResponse;
-    
-  } catch (error) {
-    console.error('Bedrock error:', error);
-    // Fallback to basic route with OSRM data if available
-    const fallbackResponse = {
-      waypoints: [
-        { lat: routeData.start[0], lng: routeData.start[1] },
-        { lat: routeData.end[0], lng: routeData.end[1] }
-      ],
-      riskLevel: "MEDIUM",
-      warnings: ["AI optimization unavailable, using direct route"],
-      estimatedTime: "Unknown"
-    };
-    
-    // Add OSRM data to fallback if available
-    if (routeData.alternativeRoutes && routeData.alternativeRoutes.length > 0) {
-      const selectedRoute = routeData.alternativeRoutes[0];
-      fallbackResponse.osrmGeometry = selectedRoute.osrmData?.geometry;
-      fallbackResponse.routeDistance = selectedRoute.distance;
-      fallbackResponse.routeDuration = selectedRoute.duration;
-    }
-    
-    return fallbackResponse;
-  }
-}
-
-async function getRouteContext(start, end) {
-  try {
-    // Get multiple route alternatives from OSRM
-    const routes = await getOSRMRoutes(start, end);
-    
-    return {
-      start,
-      end,
-      floodZones: [
-        { area: "Kota Kinabalu City Center", severity: "HIGH", coordinates: [5.9804, 116.0735] },
-        { area: "Coastal Road", severity: "MEDIUM", coordinates: [5.9731, 116.0678] },
-        { area: "Penampang District", severity: "LOW", coordinates: [5.9370, 116.1063] }
-      ],
-      alternativeRoutes: routes,
-      weather: {
-        condition: "Heavy Rain",
-        visibility: "Poor",
-        roadConditions: "Wet and slippery"
-      }
-    };
-  } catch (error) {
-    console.error('Error getting route context:', error);
-    // Fallback to basic route data
-    return {
-      start,
-      end,
-      floodZones: [],
-      alternativeRoutes: [{
-        id: "direct",
-        waypoints: [start, end],
-        distance: calculateDistance(start, end),
-        duration: 0,
-        type: "direct"
-      }],
-      weather: { condition: "Unknown" }
-    };
-  }
-}
-
-async function getOSRMRoutes(start, end) {
-  const routes = [];
-  
-  try {
-    // Get fastest route
-    const fastestRoute = await getOSRMRoute(start, end, 'fastest');
-    if (fastestRoute) routes.push(fastestRoute);
-    
-    // Get alternative route with different approach
-    const alternativeRoute = await getOSRMRoute(start, end, 'alternative');
-    if (alternativeRoute) routes.push(alternativeRoute);
-    
-  } catch (error) {
-    console.error('OSRM API error:', error);
-  }
-  
-  return routes.length > 0 ? routes : [{
-    id: "fallback",
-    waypoints: [start, end],
-    distance: calculateDistance(start, end),
-    duration: 0,
-    type: "direct"
-  }];
-}
-
-async function getOSRMRoute(start, end, type = 'fastest') {
-  try {
+function getOSRMRoute(start, end) {
+  return new Promise((resolve) => {
     const coordinates = `${start[1]},${start[0]};${end[1]},${end[0]}`;
-    const url = `${OSRM_BASE_URL}/route/v1/driving/${coordinates}?overview=full&geometries=geojson&alternatives=${type === 'alternative' ? 'true' : 'false'}`;
+    const path = `/route/v1/driving/${coordinates}?overview=full&geometries=geojson`;
     
-    const response = await fetch(url);
-    const data = await response.json();
+    const options = {
+      hostname: 'router.project-osrm.org',
+      port: 443,
+      path: path,
+      method: 'GET',
+      timeout: 8000
+    };
     
-    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-      const route = data.routes[0];
+    const req = https.request(options, (res) => {
+      let data = '';
       
-      return {
-        id: type,
-        waypoints: decodeOSRMGeometry(route.geometry),
-        distance: route.distance / 1000, // Convert to km
-        duration: route.duration / 60, // Convert to minutes
-        type: type,
-        osrmData: {
-          geometry: route.geometry,
-          legs: route.legs
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(data);
+          
+          if (result.code === 'Ok' && result.routes && result.routes.length > 0) {
+            const route = result.routes[0];
+            resolve({
+              osrmGeometry: route.geometry,
+              routeDistance: route.distance,
+              routeDuration: route.duration,
+              riskLevel: 'LOW',
+              warnings: ['OSRM route optimized'],
+              waypoints: [
+                { lat: start[0], lng: start[1] },
+                { lat: end[0], lng: end[1] }
+              ]
+            });
+          } else {
+            console.log('OSRM returned no routes');
+            resolve(null);
+          }
+        } catch (e) {
+          console.error('OSRM parse error:', e);
+          resolve(null);
         }
-      };
-    }
-  } catch (error) {
-    console.error(`Error getting ${type} route from OSRM:`, error);
-  }
-  
-  return null;
+      });
+    });
+    
+    req.on('error', (error) => {
+      console.error('OSRM request error:', error);
+      resolve(null);
+    });
+    
+    req.on('timeout', () => {
+      console.error('OSRM timeout');
+      req.destroy();
+      resolve(null);
+    });
+    
+    req.end();
+  });
 }
 
-function decodeOSRMGeometry(geometry) {
-  // Convert GeoJSON coordinates to waypoints format
-  if (geometry && geometry.coordinates) {
-    return geometry.coordinates.map(coord => ({
-      lat: coord[1],
-      lng: coord[0]
-    }));
+async function enhanceWithBedrock(osrmResult, start, end) {
+  console.log('Starting Bedrock AI analysis...');
+  
+  const prompt = `Analyze this flood evacuation route and assess safety:
+
+START: [${start[0]}, ${start[1]}]
+DESTINATION: [${end[0]}, ${end[1]}]
+DISTANCE: ${osrmResult.routeDistance}m
+DURATION: ${osrmResult.routeDuration}s
+
+Flood zones in Sabah area:
+- Kota Kinabalu City Center: HIGH risk
+- Coastal roads: MEDIUM risk
+- Penampang District: LOW risk
+
+Assess risk level (LOW/MEDIUM/HIGH) and provide specific warnings. Return only the risk level and one warning.`;
+
+  try {
+    console.log('Creating Bedrock command with model: amazon.titan-text-express-v1');
+    
+    const command = new InvokeModelCommand({
+      modelId: "amazon.titan-text-express-v1",
+      body: JSON.stringify({
+        inputText: prompt,
+        textGenerationConfig: {
+          maxTokenCount: 200,
+          temperature: 0.1
+        }
+      })
+    });
+
+    console.log('Sending request to Bedrock...');
+    const response = await bedrockClient.send(command);
+    console.log('Bedrock response received, status:', response.$metadata?.httpStatusCode);
+    
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+    console.log('Bedrock response body:', responseBody);
+    
+    const aiText = responseBody.results[0].outputText;
+    console.log('AI generated text:', aiText);
+    
+    // Extract risk level from AI response
+    const riskLevel = aiText.includes('HIGH') ? 'HIGH' : aiText.includes('MEDIUM') ? 'MEDIUM' : 'LOW';
+    console.log('Extracted risk level:', riskLevel);
+    
+    return {
+      ...osrmResult,
+      riskLevel,
+      warnings: [`AI Analysis: ${aiText.trim()}`]
+    };
+    
+  } catch (error) {
+    console.error('Bedrock error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      statusCode: error.$metadata?.httpStatusCode,
+      requestId: error.$metadata?.requestId,
+      stack: error.stack
+    });
+    
+    // Return original result with detailed error
+    return {
+      ...osrmResult,
+      riskLevel: 'MEDIUM',
+      warnings: [`AI unavailable: ${error.name} - ${error.message}`]
+    };
   }
-  return [];
 }
 
 function calculateDistance(start, end) {
-  // Simple distance calculation (in km)
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = (end[0] - start[0]) * Math.PI / 180;
   const dLon = (end[1] - start[1]) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
