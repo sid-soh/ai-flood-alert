@@ -13,27 +13,27 @@
 │                    FRONTEND LAYER                               │
 ├─────────────────────────────────────────────────────────────────┤
 │  React App (MapComponent.jsx)                                   │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   Leaflet Map   │  │  Geolocation    │  │   AI Chat UI    │ │
-│  │   - User marker │  │  - GPS tracking │  │  - User queries │ │
-│  │   - Evacuation  │  │  - Location     │  │  - AI responses │ │
-│  │     points      │  │    updates      │  │                 │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│      ┌─────────────────┐              ┌─────────────────┐       │
+│      │   Leaflet Map   │              │  Geolocation    │       │
+│      │   - User marker │              │  - GPS tracking │       │
+│      │   - Evacuation  │              │  - Location     │       │
+│      │     points      │              │    updates      │       │
+│      └─────────────────┘              └─────────────────┘       │
 │                                                                 │
-│  Hosted on: Amazon S3 + CloudFront (CDN)                       │
+│  Hosted on: Amazon S3 + CloudFront (CDN)                        │
 └─────────────────────────────────────────────────────────────────┘
-         │                       │                       │
-         │ HTTPS Requests        │ API Calls             │ WebSocket
-         ▼                       ▼                       ▼
+               │                                │                       
+               │ HTTPS Requests                 │ API Calls             
+               ▼                                ▼                       
 
 ┌─────────────────────────────────────────────────────────────────┐
 │                     API LAYER                                   │
 ├─────────────────────────────────────────────────────────────────┤
 │  Amazon API Gateway                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │ /flood-advice   │  │ /evacuation     │  │ /chat           │ │
-│  │ POST            │  │ GET             │  │ POST            │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │ /flood-advice   │  │ /evacuation     │  │ /chat           │  │
+│  │ POST            │  │ GET             │  │ POST            │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 │                                                                 │
 │  Features: Authentication, Rate Limiting, CORS                  │
 └─────────────────────────────────────────────────────────────────┘
@@ -45,56 +45,56 @@
 │                   COMPUTE LAYER                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │  AWS Lambda Functions                                           │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │ floodAnalysis   │  │ evacuationRoute │  │ aiAssistant     │ │
-│  │ - Query DB      │  │ - Find nearest  │  │ - Process query │ │
-│  │ - Get flood     │  │   shelters      │  │ - Call Bedrock  │ │
-│  │   data          │  │ - Calculate     │  │ - Return advice │ │
-│  │ - Risk analysis │  │   routes        │  │                 │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│       ┌─────────────────┐              ┌─────────────────┐      │
+│       │ floodAnalysis   │              │ evacuationRoute │      │
+│       │ - Query DB      │              │ - Find nearest  │      │
+│       │ - Get flood     │              │   shelters      │      │
+│       │   data          │              │ - Calculate     │      │
+│       │ - Risk analysis │              │   routes        │      │
+│       └─────────────────┘              └─────────────────┘      │
 └─────────────────────────────────────────────────────────────────┘
-         │                       │                       │
-         │ Database Queries      │ External API          │ AI Model
-         ▼                       ▼                       ▼
+                 │                                │                       
+                 │ Database Queries               │ External API          
+                 ▼                                ▼                      
 
 ┌─────────────────────────────────────────────────────────────────┐
 │                    DATA LAYER                                   │
 ├─────────────────────────────────────────────────────────────────┤
 │  Amazon RDS (MySQL)                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │ flood_alerts    │  │ evacuation_     │  │ user_locations  │ │
-│  │ - location      │  │   points        │  │ - user_id       │ │
-│  │ - severity      │  │ - coordinates   │  │ - lat/lng       │ │
-│  │ - timestamp     │  │ - capacity      │  │ - timestamp     │ │
-│  │ - active        │  │ - type          │  │                 │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │ flood_alerts    │  │ evacuation_     │  │ user_locations  │  │
+│  │ - location      │  │   points        │  │ - user_id       │  │
+│  │ - severity      │  │ - coordinates   │  │ - lat/lng       │  │
+│  │ - timestamp     │  │ - capacity      │  │ - timestamp     │  │
+│  │ - active        │  │ - type          │  │                 │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 │                                                                 │
-│  Features: Multi-AZ, Automated backups, Read replicas          │
+│  Features: Multi-AZ, Automated backups, Read replicas           │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │                     AI LAYER                                    │
 ├─────────────────────────────────────────────────────────────────┤
 │  Amazon Bedrock                                                 │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │ Claude 3        │  │ Risk Assessment │  │ Action Planning │ │
-│  │ - Natural       │  │ - Analyze flood │  │ - Evacuation    │ │
-│  │   language      │  │   severity      │  │   routes        │ │
-│  │ - Context       │  │ - User safety   │  │ - Safety tips   │ │
-│  │   understanding │  │                 │  │                 │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │ Claude 3        │  │ Risk Assessment │  │ Action Planning │  │
+│  │ - Natural       │  │ - Analyze flood │  │ - Evacuation    │  │
+│  │   language      │  │   severity      │  │   routes        │  │
+│  │ - Context       │  │ - User safety   │  │ - Safety tips   │  │
+│  │   understanding │  │                 │  │                 │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │                  EXTERNAL INTEGRATIONS                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │ OpenStreetMap   │  │ Overpass API    │  │ OpenElevation   │ │
-│  │ - Base map      │  │ - Emergency     │  │ - Topography    │ │
-│  │   tiles         │  │   shelters      │  │ - Elevation     │ │
-│  │                 │  │ - Assembly      │  │   data          │ │
-│  │                 │  │   points        │  │                 │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │ OpenStreetMap   │  │ Overpass API    │  │ OpenElevation   │  │
+│  │ - Base map      │  │ - Emergency     │  │ - Topography    │  │
+│  │   tiles         │  │   shelters      │  │ - Elevation     │  │
+│  │                 │  │ - Assembly      │  │   data          │  │
+│  │                 │  │   points        │  │                 │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 
 ## Data Flow
