@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mock-server": "node mock-server.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
     "leaflet": "^1.9.4",
     "leaflet-routing-machine": "^3.2.12",
     "react": "^19.1.1",

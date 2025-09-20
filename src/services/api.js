@@ -19,6 +19,26 @@ export const floodAnalysisAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ start, end })
     });
-    return response.json();
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const text = await response.text();
+    if (!text) {
+      throw new Error('Empty response from server');
+    }
+    
+    const result = JSON.parse(text);
+    
+    // Process OSRM geometry for Leaflet
+    if (result.osrmGeometry) {
+      result.leafletRoute = {
+        coordinates: result.osrmGeometry.coordinates,
+        type: result.osrmGeometry.type
+      };
+    }
+    
+    return result;
   }
 };

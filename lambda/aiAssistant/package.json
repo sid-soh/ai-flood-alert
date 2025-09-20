@@ -1,0 +1,11 @@
+{
+  "name": "ai-assistant",
+  "version": "1.0.0",
+  "description": "AI-powered flood emergency assistant using Amazon Bedrock",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.450.0",
+    "mysql2": "^3.6.0"
+  }
+}

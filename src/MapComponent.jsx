@@ -6,6 +6,7 @@ import EvacuationMarkerShadow from '../public/evacuation-icon-shadow.png';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import 'leaflet-routing-machine';
 import { getNearestEvacuationPoint } from './utils/GetNearestEvacuationPoint';
+import { floodAnalysisAPI } from './services/api';
 
 const MapComponent = () => {
   const mapRef = useRef(null);
@@ -131,26 +132,64 @@ const MapComponent = () => {
         const nearest = await getNearestEvacuationPoint(lat, lng);
         
         if (nearest) {
-          // Remove existing evacuation marker
+          // Remove existing evacuation marker and route
           if (evacuationMarkerRef.current) {
             map.removeLayer(evacuationMarkerRef.current);
           }
+          if (window.currentRoute) {
+            map.removeLayer(window.currentRoute);
+          }
+          
+          // Get AI-optimized route from backend with OSRM
+          const routeData = await floodAnalysisAPI.getEvacuationRoute(
+            [lat, lng], 
+            [nearest.lat, nearest.lon]
+          );
           
           // Add evacuation marker
           evacuationMarkerRef.current = L.marker([nearest.lat, nearest.lon], { icon: evacuationIcon }).addTo(map);
           
-          // Fit bounds to show both user and evacuation point
-          const bounds = L.latLngBounds([
-            [lat, lng],
-            [nearest.lat, nearest.lon]
-          ]);
-          map.fitBounds(bounds, { padding: [30, 30] });
+          // Display OSRM route if available
+          if (routeData.leafletRoute && routeData.leafletRoute.coordinates) {
+            const routeCoords = routeData.leafletRoute.coordinates.map(coord => [coord[1], coord[0]]);
+            
+            window.currentRoute = L.polyline(routeCoords, {
+              color: routeData.riskLevel === 'HIGH' ? 'red' : routeData.riskLevel === 'MEDIUM' ? 'orange' : 'blue',
+              weight: 5,
+              opacity: 0.8
+            }).addTo(map);
+            
+            // Fit bounds to show route
+            map.fitBounds(window.currentRoute.getBounds(), { padding: [20, 20] });
+          } else {
+            // Fallback to simple bounds
+            const bounds = L.latLngBounds([
+              [lat, lng],
+              [nearest.lat, nearest.lon]
+            ]);
+            map.fitBounds(bounds, { padding: [30, 30] });
+          }
+          
+          // Show route info and warnings
+          if (routeData.warnings && routeData.warnings.length > 0) {
+            console.log('Route warnings:', routeData.warnings);
+          }
           
           // Trigger evacuation info update via custom event
-          window.dispatchEvent(new CustomEvent('evacuationFound', { detail: nearest }));
+          window.dispatchEvent(new CustomEvent('evacuationFound', { 
+            detail: { 
+              ...nearest, 
+              routeInfo: {
+                distance: routeData.routeDistance,
+                duration: routeData.routeDuration,
+                riskLevel: routeData.riskLevel,
+                warnings: routeData.warnings
+              }
+            } 
+          }));
         }
       } catch (error) {
-        console.error('Error finding evacuation point:', error);
+        console.error('Error finding evacuation route:', error);
       }
     };
 
