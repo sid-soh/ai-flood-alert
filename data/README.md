@@ -9,5 +9,5 @@
 ```
 2. Data collection phase:
 ```bash
-    python realtime_data.py # Scrapes tweets and saves to database
+    python scrape_x.py # Scrapes tweets and saves to database
 ```
