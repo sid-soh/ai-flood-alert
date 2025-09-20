@@ -23,3 +23,6 @@
 ```bash
     python scrape_x.py # Scrapes tweets and saves to database
 ```
+```bash
+    python fetch_weather_forecast.py # Fetch official data and saves to database
+```
