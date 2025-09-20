@@ -48,10 +48,11 @@ const NewsDashboard = () => {
   }, []);
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="news-dashboard" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       <h1>News Dashboard</h1>
-      <div style={{ 
-        backgroundColor: 'rgba(239, 234, 228, 1)', 
+      <div className="news-header" style={{ 
+        backgroundColor: 'rgba(244, 244, 244, 1)', 
+        border: '1px solid rgba(239, 234, 228, 1)', 
         padding: '15px', 
         borderRadius: '8px', 
         marginBottom: '20px',
@@ -74,7 +75,7 @@ const NewsDashboard = () => {
           border: '1px solid rgba(239, 234, 228, 1)', 
           borderRadius: '8px', 
           padding: '20px',
-          backgroundColor: 'white'
+          backgroundColor: 'rgba(244, 244, 244, 1)'
         }}>
           <h3 style={{ color: '#1da1f2', marginTop: '0' }}>🐦 Social Media Analytics</h3>
           {twitterData ? (
@@ -86,7 +87,7 @@ const NewsDashboard = () => {
                 Last updated: {twitterData.lastUpdated}
               </p>
               
-              <div style={{ marginTop: '15px' }}>
+              <div style={{ marginTop: '15px', color: 'black' }}>
                 <strong>Trending Keywords:</strong>
                 <div style={{ marginTop: '8px' }}>
                   {twitterData.keywords.map((keyword, index) => (
@@ -111,7 +112,7 @@ const NewsDashboard = () => {
               </div>
             </div>
           ) : (
-            <div>Loading social media data...</div>
+            <div style={{color: 'black'}}>Loading social media data...</div>
           )}
         </div>
 
@@ -120,7 +121,7 @@ const NewsDashboard = () => {
           border: '1px solid rgba(239, 234, 228, 1)', 
           borderRadius: '8px', 
           padding: '20px',
-          backgroundColor: 'white'
+          backgroundColor: 'rgba(244, 244, 244, 1)'
         }}>
           <h3 style={{ color: '#28a745', marginTop: '0' }}>🌧️ Meteorological Report</h3>
           {weatherData ? (
@@ -144,7 +145,7 @@ const NewsDashboard = () => {
                 Last updated: {weatherData.lastUpdated}
               </p>
               
-              <div style={{ marginTop: '15px' }}>
+              <div style={{ marginTop: '15px', color: 'black' }}>
                 <div style={{ marginBottom: '10px' }}>
                   <strong>Rainfall:</strong> {weatherData.rainfall}
                 </div>
@@ -165,7 +166,7 @@ const NewsDashboard = () => {
               </div>
             </div>
           ) : (
-            <div>Loading weather data...</div>
+            <div style={{color: 'black'}}>Loading weather data...</div>
           )}
         </div>
 
@@ -174,11 +175,11 @@ const NewsDashboard = () => {
           border: '1px solid #dee2e6', 
           borderRadius: '8px', 
           padding: '20px',
-          backgroundColor: 'white'
+          backgroundColor: 'rgba(244, 244, 244, 1)'
         }}>
           <h3 style={{ color: '#dc3545', marginTop: '0' }}>📰 Official News Updates</h3>
           {officialNews ? (
-            <div>
+            <div style={{color:'black'}}>
               {officialNews.map((news, index) => (
                 <div key={index} style={{ 
                   marginBottom: '15px', 
@@ -210,7 +211,7 @@ const NewsDashboard = () => {
               </div>
             </div>
           ) : (
-            <div>Loading official news...</div>
+            <div style={{color: 'black'}}>Loading official news...</div>
           )}
         </div>
       </div>

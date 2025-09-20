@@ -111,6 +111,7 @@ let currentPage = 'map';
 let roots = {};
 
 function showPage(page) {
+  console.log('Switching to page:', page);
   currentPage = page;
   const content = document.getElementById('content');
   
@@ -131,13 +132,16 @@ function showPage(page) {
       <div id="woof"></div>
     `;
     
-    if (!roots.meow) roots.meow = createRoot(document.getElementById('meow'));
-    if (!roots.map) roots.map = createRoot(document.getElementById('map'));
-    if (!roots.mapInfo) roots.mapInfo = createRoot(document.getElementById('map-info'));
+    // Create new roots since innerHTML cleared the old ones
+    roots.meow = createRoot(document.getElementById('meow'));
+    roots.map = createRoot(document.getElementById('map'));
+    roots.mapInfo = createRoot(document.getElementById('map-info'));
     
     roots.meow.render(title);
     roots.map.render(DisplayMap());
     roots.mapInfo.render(GetMapInfo());
+    
+    console.log('Map page rendered');
   }
 }
 

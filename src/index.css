@@ -78,9 +78,10 @@ button:focus-visible {
         
 
 #nav-btn {
-  width:  20%;
+  width:  16%;
   border-radius: 2px;
   border: 1px solid transparent;
+  height: 60px;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
@@ -107,6 +108,7 @@ button:focus-visible {
 
 #content {
   padding-left: 20px;
+  padding-bottom: 50px;
 }
 
 #map-container {
@@ -128,3 +130,113 @@ button:focus-visible {
   width: 600px;
 }
 
+#nav-logo {
+  height: 40px;
+  width: auto;
+  cursor: pointer;
+}
+
+#theme-toggle {
+  width: 16%;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  height: 60px;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #242424;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.87);
+  margin-left: auto;
+}
+
+#theme-toggle:hover {
+  border-color: #7d7d81;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Light mode styles */
+body.light-mode {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+body.light-mode #nav-link {
+  background-color: #f8f9fa;
+  color: #000000;
+}
+
+body.light-mode #nav-btn {
+  background-color: #f8f9fa;
+  color: #000000;
+}
+
+body.light-mode #nav-btn:hover {
+  background-color: #e9ecef;
+}
+
+body.light-mode #theme-toggle {
+  background-color: #f8f9fa;
+  color: #000000;
+}
+
+body.light-mode #theme-toggle:hover {
+  background-color: #e9ecef;
+}
+
+body.light-mode #content {
+  background-color: #ffffff;
+  color: #000000;
+  padding-bottom: 50px;
+}
+
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3,
+body.light-mode p {
+  color: #000000;
+}
+
+body.light-mode button {
+  background-color: #f8f9fa;
+  color: #000000;
+  border: 1px solid #dee2e6;
+}
+
+body.light-mode button:hover {
+  background-color: #e9ecef;
+}
+
+/* News Dashboard light mode */
+body.light-mode .news-dashboard {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+body.light-mode .news-header {
+  background-color: #f8f9fa !important;
+  color: #000000;
+}
+
+body.light-mode .news-box {
+  background-color: #ffffff !important;
+  border-color: #dee2e6 !important;
+  color: #000000;
+}
+
+/* Map container light mode */
+body.light-mode #map-container {
+  background-color: #ffffff;
+}
+
+body.light-mode #map-info {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+body.light-mode #content {
+  padding-bottom: 50px; 
+}
