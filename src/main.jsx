@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import MapComponent from './MapComponent';
 import EvacuationInfo from './EvacuationInfo';
 import NewsDashboard from './NewsDashboard';
+import LiveFloodDashboard from './LiveFloodDashboard';
 
 const title = (
   <h1>Live Map</h1>
@@ -32,7 +33,6 @@ function LocationSelector() {
       if (window.setMapLocation) {
         window.setMapLocation(location);
       } else {
-        // Retry after a short delay if function not available
         setTimeout(trySetLocation, 100);
       }
     };
@@ -60,6 +60,7 @@ function LocationSelector() {
         onClick={() => handleLocationChange({ lat: 5.96941, lng: 116.09044, name: 'Sabah (Flood Crisis)' })}
         style={{
           padding: '8px 16px',
+          marginRight: '10px',
           backgroundColor: '#dc3545',
           color: 'white',
           border: 'none',
@@ -69,12 +70,26 @@ function LocationSelector() {
       >
         View Sabah Flood Crisis
       </button>
+      <button 
+        onClick={() => window.performFloodAnalysis && window.performFloodAnalysis(5.96941, 116.09044)}
+        style={{
+          padding: '8px 16px',
+          backgroundColor: '#fd7e14',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+      >
+        AI Flood Analysis
+      </button>
     </div>
   );
 }
 
 function GetEvacuationInfo() {
   const [aiAnalysis, setAiAnalysis] = React.useState('');
+  const [floodAnalysis, setFloodAnalysis] = React.useState('');
   const [distressCallsVisible, setDistressCallsVisible] = React.useState(false);
   
   React.useEffect(() => {
@@ -90,8 +105,19 @@ function GetEvacuationInfo() {
       }
     };
     
+    const handleFloodAnalysis = (event) => {
+      const analysis = event.detail.analysis;
+      if (analysis) {
+        setFloodAnalysis(analysis);
+      }
+    };
+    
     window.addEventListener('evacuationFound', handleEvacuationFound);
-    return () => window.removeEventListener('evacuationFound', handleEvacuationFound);
+    window.addEventListener('floodAnalysisComplete', handleFloodAnalysis);
+    return () => {
+      window.removeEventListener('evacuationFound', handleEvacuationFound);
+      window.removeEventListener('floodAnalysisComplete', handleFloodAnalysis);
+    };
   }, []);
   
   const handleCallForHelp = async () => {
@@ -103,7 +129,6 @@ function GetEvacuationInfo() {
     navigator.geolocation.getCurrentPosition(async (position) => {
       const { latitude, longitude } = position.coords;
       
-      // Check if in affected area (hardcoded for testing)
       const affectedAreas = [
         { name: 'Kota Kinabalu City Center', lat: 5.9804, lng: 116.0735, radius: 2000 },
         { name: 'Penampang District', lat: 5.9370, lng: 116.1063, radius: 3000 }
@@ -120,7 +145,7 @@ function GetEvacuationInfo() {
       }
       
       const message = prompt('Please describe your situation (optional):');
-      if (message === null) return; // User cancelled
+      if (message === null) return;
       
       try {
         const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/distress-calls', {
@@ -225,28 +250,28 @@ function GetEvacuationInfo() {
         </div>
       )}
       
+      {floodAnalysis && (
+        <div style={{
+          backgroundColor: '#fff3cd',
+          border: '1px solid #ffeaa7',
+          borderRadius: '4px',
+          padding: '15px',
+          marginBottom: '15px',
+          fontSize: '14px',
+          lineHeight: '1.5'
+        }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#856404' }}>🌊 AI Flood Risk Analysis</h4>
+          <p style={{ margin: 0, color: '#856404' }}>{floodAnalysis}</p>
+        </div>
+      )}
+      
       <EvacuationInfo />
     </div>
   );
 }
 
-function GetLegend() {
-  return (
-    <div>
-      <h2>Legend</h2>
-      <p>Legend content goes here.</p>
-    </div>
-  );
-}
-
-createRoot(document.getElementById('meow')).render(
-  /* mycar.show() */
-  title
-)
-
-createRoot(document.getElementById('map')).render(
-  DisplayMap()
-)
+createRoot(document.getElementById('meow')).render(title)
+createRoot(document.getElementById('map')).render(DisplayMap())
 
 // Page state management
 let currentPage = 'map';
@@ -263,6 +288,12 @@ function showPage(page) {
       roots.news = createRoot(document.getElementById('news-dashboard'));
     }
     roots.news.render(<NewsDashboard />);
+  } else if (page === 'live') {
+    content.innerHTML = '<div id="live-dashboard"></div>';
+    if (!roots.live) {
+      roots.live = createRoot(document.getElementById('live-dashboard'));
+    }
+    roots.live.render(<LiveFloodDashboard />);
   } else {
     content.innerHTML = `
       <div id="meow"></div>
@@ -274,7 +305,6 @@ function showPage(page) {
       <div id="woof"></div>
     `;
     
-    // Create new roots since innerHTML cleared the old ones
     roots.meow = createRoot(document.getElementById('meow'));
     roots.map = createRoot(document.getElementById('map'));
     roots.mapInfo = createRoot(document.getElementById('map-info'));
@@ -282,8 +312,6 @@ function showPage(page) {
     roots.meow.render(title);
     roots.map.render(DisplayMap());
     roots.mapInfo.render(GetMapInfo());
-    
-    console.log('Map page rendered');
   }
 }
 
@@ -296,12 +324,27 @@ roots.meow.render(title);
 roots.map.render(DisplayMap());
 roots.mapInfo.render(GetMapInfo());
 
-// Ensure map component is fully loaded before allowing location changes
-setTimeout(() => {
-  if (roots.mapInfo) {
-    roots.mapInfo.render(GetMapInfo());
-  }
-}, 500);
-
-// Expose function globally for navigation
+// Make functions available globally
 window.showPage = showPage;
+
+window.performFloodAnalysis = async (lat, lng) => {
+  try {
+    const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/flood-analysis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latitude: lat, longitude: lng })
+    });
+    
+    const result = await response.json();
+    
+    window.dispatchEvent(new CustomEvent('floodAnalysisComplete', {
+      detail: { analysis: result.analysis || result.message || 'Analysis completed' }
+    }));
+    
+  } catch (error) {
+    console.error('Flood analysis error:', error);
+    window.dispatchEvent(new CustomEvent('floodAnalysisComplete', {
+      detail: { analysis: 'Unable to perform flood analysis at this time.' }
+    }));
+  }
+};
