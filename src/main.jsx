@@ -216,9 +216,31 @@ function GetEvacuationInfo() {
     };
   }, []);
   
+  const [showAlert, setShowAlert] = React.useState(false);
+  const [alertMessage, setAlertMessage] = React.useState('');
+  const [showPrompt, setShowPrompt] = React.useState(false);
+  const [promptCallback, setPromptCallback] = React.useState(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  
+  const showCustomAlert = (message) => {
+    setIsLoading(false);
+    setAlertMessage(message);
+    setShowAlert(true);
+  };
+  
+  const showCustomPrompt = (message, callback) => {
+    setAlertMessage(message);
+    setPromptCallback(() => callback);
+    setShowPrompt(true);
+  };
+  
   const handleCallForHelp = async () => {
+    setIsLoading(true);
+    setAlertMessage('🔍 Checking your location and flood risk status...');
+    setShowAlert(true);
+    
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by this browser.');
+      showCustomAlert('Geolocation is not supported by this browser.');
       return;
     }
     
@@ -226,51 +248,64 @@ function GetEvacuationInfo() {
       const { latitude, longitude } = position.coords;
       console.log('User location:', latitude, longitude);
       
-      const affectedAreas = [
-        { name: 'Kota Kinabalu City Center', lat: 5.9804, lng: 116.0735, radius: 2000 },
-        { name: 'Penampang District', lat: 5.9370, lng: 116.1063, radius: 3000 }
-      ];
-      
-      const distances = affectedAreas.map(area => {
-        const distance = calculateDistance(latitude, longitude, area.lat, area.lng);
-        console.log(`Distance to ${area.name}: ${distance}m (limit: ${area.radius}m)`);
-        return { ...area, distance };
-      });
-      
-      const isInAffectedArea = distances.some(area => area.distance <= area.radius);
-      console.log('Is in affected area:', isInAffectedArea);
-      
-      if (!isInAffectedArea) {
-        alert(`You are not currently in an affected flood area.\nClosest area: ${distances[0].name} (${Math.round(distances[0].distance)}m away)`);
-        return;
-      }
-      
-      const message = prompt('Please describe your situation (optional):');
-      if (message === null) return;
-      
       try {
-        console.log('Sending distress call:', { latitude, longitude, message });
-        const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/distress-calls', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ latitude, longitude, message })
+        // Fetch current flood status
+        const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/flood-status');
+        const result = await response.json();
+        
+        // Check if user is in a flood-prone area
+        const floodAreas = result.cities.filter(city => 
+          city.riskLevel === 'HIGH' || city.riskLevel === 'MEDIUM'
+        );
+        
+        const distances = floodAreas.map(area => {
+          const distance = calculateDistance(latitude, longitude, area.lat, area.lng);
+          const radius = area.name === 'Kota Kinabalu' ? 15000 : 
+                        area.name === 'Sandakan' ? 12000 : 
+                        area.name === 'Tawau' ? 10000 : 8000; // Default radius
+          console.log(`Distance to ${area.name}: ${distance}m (limit: ${radius}m)`);
+          return { ...area, distance, radius };
         });
         
-        console.log('Response status:', response.status);
-        const result = await response.json();
-        console.log('Response body:', result);
+        const nearestFloodArea = distances.find(area => area.distance <= area.radius);
         
-        if (response.ok) {
-          alert('Help request sent successfully! Emergency services have been notified.');
-        } else {
-          alert(`Failed to send help request: ${result.error || 'Unknown error'}`);
+        if (!nearestFloodArea) {
+          const closest = distances.sort((a, b) => a.distance - b.distance)[0];
+          showCustomAlert(`You are not currently in a flood-prone area.\nClosest flood risk area: ${closest?.name || 'Unknown'} (${Math.round(closest?.distance || 0)}m away)`);
+          return;
         }
+        
+        console.log(`User is in flood area: ${nearestFloodArea.name} (${nearestFloodArea.riskLevel} risk)`);
       } catch (error) {
-        console.error('Error sending distress call:', error);
-        alert('Failed to send help request: ' + error.message);
+        console.error('Error fetching flood status:', error);
+        showCustomAlert('Unable to verify flood risk status. Emergency services will still be notified.');
       }
+      
+      showCustomPrompt('Please describe your situation (optional):', async (message) => {
+        try {
+          console.log('Sending distress call:', { latitude, longitude, message });
+          const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/distress-calls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude, longitude, message })
+          });
+          
+          console.log('Response status:', response.status);
+          const result = await response.json();
+          console.log('Response body:', result);
+          
+          if (response.ok) {
+            showCustomAlert('Help request sent successfully! Emergency services have been notified.');
+          } else {
+            showCustomAlert(`Failed to send help request: ${result.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error('Error sending distress call:', error);
+          showCustomAlert('Failed to send help request: ' + error.message);
+        }
+      });
     }, (error) => {
-      alert('Unable to get your location. Please enable location services.');
+      showCustomAlert('Unable to get your location. Please enable location services.');
     });
   };
   
@@ -348,6 +383,133 @@ function GetEvacuationInfo() {
         
         <EvacuationInfo />
       </div>
+      
+      {/* Custom Alert Modal */}
+      {showAlert && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            maxWidth: '90%',
+            maxHeight: '80%',
+            overflow: 'auto',
+            textAlign: 'center'
+          }}>
+            <p style={{ color: '#000', margin: '0 0 20px 0', whiteSpace: 'pre-line' }}>{alertMessage}</p>
+            {isLoading ? (
+              <div style={{
+                width: '20px',
+                height: '20px',
+                border: '2px solid #f3f3f3',
+                borderTop: '2px solid #007bff',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto'
+              }}></div>
+            ) : (
+              <button 
+                onClick={() => setShowAlert(false)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                OK
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Custom Prompt Modal */}
+      {showPrompt && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            maxWidth: '90%',
+            maxHeight: '80%',
+            overflow: 'auto'
+          }}>
+            <p style={{ color: '#000', margin: '0 0 15px 0' }}>{alertMessage}</p>
+            <textarea 
+              id="prompt-input"
+              style={{
+                width: '100%',
+                height: '80px',
+                padding: '10px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                marginBottom: '15px',
+                resize: 'vertical'
+              }}
+              placeholder="Describe your situation..."
+            />
+            <div style={{ textAlign: 'center' }}>
+              <button 
+                onClick={() => {
+                  const input = document.getElementById('prompt-input');
+                  const message = input.value.trim();
+                  setShowPrompt(false);
+                  if (promptCallback) promptCallback(message);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  marginRight: '10px'
+                }}
+              >
+                Send Help Request
+              </button>
+              <button 
+                onClick={() => setShowPrompt(false)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Map Display Options */}
       <div style={{ marginBottom: '20px' }}>
