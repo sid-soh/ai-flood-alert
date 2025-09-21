@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import MarkerShadow from '../public/user-marker-shadow.png'; 
-import EvacuationMarkerShadow from '../public/evacuation-icon-shadow.png'; 
+import MarkerShadow from '../assets/user-marker-shadow.png'; 
+import EvacuationMarkerShadow from '../assets/evacuation-icon-shadow.png';
+import DistressMarker from '../assets/distress-marker.png'; 
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import 'leaflet-routing-machine';
 import { getNearestEvacuationPoint } from './utils/GetNearestEvacuationPoint';
@@ -33,6 +34,14 @@ const MapComponent = () => {
     iconSize: [34, 41], 
     iconAnchor: [16, 32], // Point of the icon which corresponds to marker's location
     popupAnchor: [0, -32], // Position of the popup relative to icon
+  });
+
+  // Custom icon for distress calls
+  const distressIcon = L.icon({
+    iconUrl: DistressMarker,
+    iconSize: [34, 41],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32]
   });
   
 
@@ -217,19 +226,7 @@ const MapComponent = () => {
           const distressCalls = result.calls || [];
           
           const markers = distressCalls.map(call => {
-            const marker = L.marker([call.latitude, call.longitude], {
-              icon: L.icon({
-                iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                    <circle cx="12" cy="12" r="10" fill="#dc3545" stroke="white" stroke-width="2"/>
-                    <text x="12" y="16" text-anchor="middle" fill="white" font-size="14" font-weight="bold">!</text>
-                  </svg>
-                `),
-                iconSize: [24, 24],
-                iconAnchor: [12, 12],
-                popupAnchor: [0, -12]
-              })
-            })
+            const marker = L.marker([call.latitude, call.longitude], { icon: distressIcon })
             .addTo(mapInstanceRef.current)
             .bindPopup(`
               <div>
