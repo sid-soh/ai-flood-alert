@@ -1,7 +1,7 @@
 import requests
 from datetime import datetime
-import mysql.connector
-from mysql_connector import get_db_connection
+import pymysql
+from rds_connector import get_rds_connection
 
 
 class WeatherAPIConnector:
@@ -26,9 +26,9 @@ class WeatherAPIConnector:
     
         cursor = None
         try:
-            self.db_connection = get_db_connection()
+            self.db_connection = get_rds_connection()
             if not self.db_connection:
-                print("Failed to connect to database")
+                print("Failed to connect to RDS database")
                 return
     
             cursor = self.db_connection.cursor()
@@ -146,8 +146,8 @@ class WeatherAPIConnector:
             self.db_connection.commit()
             print(f"Successfully stored {sabah_count} unique Sabah weather forecasts")
     
-        except mysql.connector.Error as e:
-            print(f"Database error: {e}")
+        except Exception as e:
+            print(f"RDS Database error: {e}")
             if self.db_connection:
                 self.db_connection.rollback()
         finally:
@@ -167,8 +167,8 @@ class WeatherAPIConnector:
             """, (location_name, forecast_date))
             
             result = cursor.fetchone()
-            cursor.fetchall()  # Clear any remaining results
-            
+            if isinstance(result, dict):
+                return result['COUNT(*)'] > 0
             return result[0] > 0
         except Exception as e:
             print(f"Error checking existing forecast: {e}")
@@ -181,10 +181,9 @@ class WeatherAPIConnector:
         cursor.execute("SELECT location_id FROM location WHERE name = %s AND state = %s", (location_name, state))
         result = cursor.fetchone()
 
-        # Consume any remaining results to clear the cursor
-        cursor.fetchall()
-
         if result:
+            if isinstance(result, dict):
+                return result['location_id']
             return result[0]
 
         # Create new location
