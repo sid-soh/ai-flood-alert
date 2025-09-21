@@ -75,6 +75,7 @@ function LocationSelector() {
 
 function GetEvacuationInfo() {
   const [aiAnalysis, setAiAnalysis] = React.useState('');
+  const [distressCallsVisible, setDistressCallsVisible] = React.useState(false);
   
   React.useEffect(() => {
     const handleEvacuationFound = (event) => {
@@ -93,6 +94,73 @@ function GetEvacuationInfo() {
     return () => window.removeEventListener('evacuationFound', handleEvacuationFound);
   }, []);
   
+  const handleCallForHelp = async () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.');
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const { latitude, longitude } = position.coords;
+      
+      // Check if in affected area (hardcoded for testing)
+      const affectedAreas = [
+        { name: 'Kota Kinabalu City Center', lat: 5.9804, lng: 116.0735, radius: 2000 },
+        { name: 'Penampang District', lat: 5.9370, lng: 116.1063, radius: 3000 }
+      ];
+      
+      const isInAffectedArea = affectedAreas.some(area => {
+        const distance = calculateDistance(latitude, longitude, area.lat, area.lng);
+        return distance <= area.radius;
+      });
+      
+      if (!isInAffectedArea) {
+        alert('You are not currently in an affected flood area.');
+        return;
+      }
+      
+      const message = prompt('Please describe your situation (optional):');
+      if (message === null) return; // User cancelled
+      
+      try {
+        const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/distress-calls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude, longitude, message })
+        });
+        
+        if (response.ok) {
+          alert('Help request sent successfully! Emergency services have been notified.');
+        } else {
+          alert('Failed to send help request. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error sending distress call:', error);
+        alert('Failed to send help request. Please try again.');
+      }
+    }, (error) => {
+      alert('Unable to get your location. Please enable location services.');
+    });
+  };
+  
+  const toggleDistressCalls = () => {
+    setDistressCallsVisible(!distressCallsVisible);
+    if (window.toggleDistressCalls) {
+      window.toggleDistressCalls(!distressCallsVisible);
+    }
+  };
+  
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lng2-lng1) * Math.PI/180;
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+  
   return (
     <div>
       <button 
@@ -104,10 +172,42 @@ function GetEvacuationInfo() {
           border: 'none',
           borderRadius: '4px',
           cursor: 'pointer',
-          marginBottom: '15px'
+          marginBottom: '10px',
+          marginRight: '10px'
         }}
       >
         Find Evacuation Route
+      </button>
+      
+      <button 
+        onClick={handleCallForHelp}
+        style={{
+          padding: '10px 20px',
+          backgroundColor: '#dc3545',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          marginBottom: '10px',
+          marginRight: '10px'
+        }}
+      >
+        Call for Help
+      </button>
+      
+      <button 
+        onClick={toggleDistressCalls}
+        style={{
+          padding: '10px 20px',
+          backgroundColor: distressCallsVisible ? '#6c757d' : '#28a745',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          marginBottom: '15px'
+        }}
+      >
+        {distressCallsVisible ? 'Hide Distress Calls' : 'Show Distress Calls'}
       </button>
       
       {aiAnalysis && (

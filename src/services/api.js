@@ -13,6 +13,21 @@ export const floodAnalysisAPI = {
     return response.json();
   },
 
+  createDistressCall: async (latitude, longitude, message) => {
+    const response = await fetch(`${config.API_BASE_URL}/distress-calls`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latitude, longitude, message })
+    });
+    return response.json();
+  },
+
+  getDistressCalls: async () => {
+    const response = await fetch(`${config.API_BASE_URL}/distress-calls`);
+    const result = await response.json();
+    return result.calls || [];
+  },
+
   getEvacuationRoute: async (start, end) => {
     const response = await fetch(`${config.API_BASE_URL}/optimize-route`, {
       method: 'POST',

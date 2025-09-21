@@ -17,6 +17,7 @@ const MapComponent = () => {
   const geoWatchIdRef = useRef(null);
   const [userLocation, setUserLocation] = useState(null);
   const [locationMode, setLocationMode] = useState('manual');
+  const [distressMarkers, setDistressMarkers] = useState([]);
 
   // Custom icon for regular marker 
   const markerIcon = L.icon({
@@ -32,6 +33,14 @@ const MapComponent = () => {
     iconSize: [34, 41], 
     iconAnchor: [16, 32], // Point of the icon which corresponds to marker's location
     popupAnchor: [0, -32], // Position of the popup relative to icon
+  });
+  
+  // Custom icon for distress calls
+  const distressIcon = L.divIcon({
+    html: '<div style="background-color: #dc3545; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">!</div>',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10]
   });
 
   useEffect(() => {
@@ -204,9 +213,45 @@ const MapComponent = () => {
     };
 
     window.showEvacuationRoute = showEvacuationRoute;
+    
+    // Distress calls functionality
+    const toggleDistressCalls = async (show) => {
+      if (show) {
+        try {
+          const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/distress-calls');
+          const distressCalls = await response.json();
+          
+          const markers = distressCalls.map(call => {
+            const marker = L.marker([call.latitude, call.longitude], { icon: distressIcon })
+              .addTo(mapInstanceRef.current)
+              .bindPopup(`
+                <div>
+                  <strong>Distress Call</strong><br>
+                  <small>${new Date(call.created_at).toLocaleString()}</small><br>
+                  ${call.user_message ? `Message: ${call.user_message}` : 'No message provided'}
+                </div>
+              `);
+            return marker;
+          });
+          
+          setDistressMarkers(markers);
+        } catch (error) {
+          console.error('Error fetching distress calls:', error);
+        }
+      } else {
+        // Remove all distress markers
+        distressMarkers.forEach(marker => {
+          mapInstanceRef.current.removeLayer(marker);
+        });
+        setDistressMarkers([]);
+      }
+    };
+    
+    window.toggleDistressCalls = toggleDistressCalls;
 
     return () => {
       delete window.showEvacuationRoute;
+      delete window.toggleDistressCalls;
     };
   }, [userLocation]);
 

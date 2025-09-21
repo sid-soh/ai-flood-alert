@@ -1,7 +1,9 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>React App Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Flood Alert</title>
     <link rel="stylesheet" href="src/index.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -11,6 +13,13 @@
      crossorigin=""></script>
   </head>
   <body>
+    <!-- Mobile Menu Button -->
+    <div id="mobile-menu-btn" class="mobile-only">
+      <img src="/src/assets/bit-bugs-logo-white-2.png" alt="RapidResponse Logo" id="mobile-header-logo" />
+      <button id="hamburger-btn">☰ Menu</button>
+    </div>
+    
+    <!-- Desktop Navigation -->
     <div class="container" id="nav-link">
       <button id="nav-btn"><img src="/src/assets/bit-bugs-logo-white-2.png" alt="Bit Bugs Logo" id="nav-logo" /></button>
       <div id="empty"></div>
@@ -19,6 +28,23 @@
       <button id="nav-btn">News Dashboard</button>
       <button id="nav-btn">About</button>
       <button id="theme-toggle">Light Mode</button>
+    </div>
+    
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu-overlay" class="mobile-only">
+      <div id="mobile-menu">
+        <div id="mobile-menu-header">
+          <img src="/src/assets/bit-bugs-logo-white-2.png" alt="Bit Bugs Logo" id="mobile-logo" />
+          <button id="close-menu-btn">✕</button>
+        </div>
+        <div id="mobile-menu-items">
+          <button class="mobile-nav-btn">Map</button>
+          <button class="mobile-nav-btn">Call for help</button>
+          <button class="mobile-nav-btn">News Dashboard</button>
+          <button class="mobile-nav-btn">About</button>
+          <button id="mobile-theme-toggle">Light Mode</button>
+        </div>
+      </div>
     </div>
     <div id="content">
     <div id="meow"></div>
@@ -40,7 +66,14 @@
     document.addEventListener('DOMContentLoaded', function() {
       const navButtons = document.querySelectorAll('#nav-btn');
       const themeToggle = document.getElementById('theme-toggle');
+      const mobileNavButtons = document.querySelectorAll('.mobile-nav-btn');
+      const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+      const hamburgerBtn = document.getElementById('hamburger-btn');
+      const closeMenuBtn = document.getElementById('close-menu-btn');
+      const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+      const mobileMenu = document.getElementById('mobile-menu');
       
+      // Desktop navigation
       navButtons.forEach((button, index) => {
         button.addEventListener('click', function() {
           console.log('Button clicked, index:', index, 'text:', button.textContent);
@@ -53,19 +86,64 @@
           }
         });
       });
+      
+      // Mobile navigation
+      mobileNavButtons.forEach((button, index) => {
+        button.addEventListener('click', function() {
+          if (index === 0) { // Map button
+            window.showPage && window.showPage('map');
+          } else if (index === 2) { // News Dashboard button
+            window.showPage && window.showPage('news');
+          }
+          closeMobileMenu();
+        });
+      });
+      
+      // Mobile menu controls
+      hamburgerBtn.addEventListener('click', openMobileMenu);
+      closeMenuBtn.addEventListener('click', closeMobileMenu);
+      mobileMenuOverlay.addEventListener('click', function(e) {
+        if (e.target === mobileMenuOverlay) {
+          closeMobileMenu();
+        }
+      });
+      
+      function openMobileMenu() {
+        mobileMenuOverlay.style.display = 'block';
+        setTimeout(() => mobileMenu.classList.add('open'), 10);
+      }
+      
+      function closeMobileMenu() {
+        mobileMenu.classList.remove('open');
+        setTimeout(() => mobileMenuOverlay.style.display = 'none', 300);
+      }
 
       // Theme toggle functionality
-      themeToggle.addEventListener('click', function() {
+      function toggleTheme() {
         document.body.classList.toggle('light-mode');
         const logo = document.getElementById('nav-logo');
+        const mobileLogo = document.getElementById('mobile-logo');
+        const mobileHeaderLogo = document.getElementById('mobile-header-logo');
         
         if (document.body.classList.contains('light-mode')) {
           themeToggle.textContent = 'Dark Mode';
+          mobileThemeToggle.textContent = 'Dark Mode';
           logo.src = '/src/assets/bit-bugs-logo-black-2.png';
+          mobileLogo.src = '/src/assets/bit-bugs-logo-black-2.png';
+          mobileHeaderLogo.src = '/src/assets/bit-bugs-logo-black-2.png';
         } else {
           themeToggle.textContent = 'Light Mode';
+          mobileThemeToggle.textContent = 'Light Mode';
           logo.src = '/src/assets/bit-bugs-logo-white-2.png';
+          mobileLogo.src = '/src/assets/bit-bugs-logo-white-2.png';
+          mobileHeaderLogo.src = '/src/assets/bit-bugs-logo-white-2.png';
         }
+      }
+      
+      themeToggle.addEventListener('click', toggleTheme);
+      mobileThemeToggle.addEventListener('click', function() {
+        toggleTheme();
+        closeMobileMenu();
       });
     });
   </script>

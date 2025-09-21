@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS postkeyword;
 DROP TABLE IF EXISTS x_post;
 DROP TABLE IF EXISTS official_announcement;
 DROP TABLE IF EXISTS meteorological_alert;
+DROP TABLE IF EXISTS distress_calls;
 DROP TABLE IF EXISTS source;
 DROP TABLE IF EXISTS location;
 DROP TABLE IF EXISTS keyword;
@@ -141,6 +142,25 @@ CREATE INDEX idx_official_announcement_published_at ON official_announcement(pub
 CREATE INDEX idx_official_announcement_active ON official_announcement(is_active);
 CREATE INDEX idx_official_announcement_type ON official_announcement(announcement_type);
 
+-- Distress calls table for user help requests
+CREATE TABLE distress_calls (
+    call_id INT AUTO_INCREMENT PRIMARY KEY,
+    latitude DECIMAL(10, 8) NOT NULL,
+    longitude DECIMAL(11, 8) NOT NULL,
+    user_message TEXT,
+    call_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    rescue_status ENUM('PENDING', 'RESCUED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+    rescued_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 CREATE INDEX idx_assessment_status ON assessment(status);
 CREATE INDEX idx_assessment_type ON assessment(assessment_type);
 CREATE INDEX idx_assessment_created_at ON assessment(created_at);
+
+-- Indexes for distress calls
+CREATE INDEX idx_distress_location ON distress_calls(latitude, longitude);
+CREATE INDEX idx_distress_status ON distress_calls(rescue_status);
+CREATE INDEX idx_distress_call_time ON distress_calls(call_time);
+CREATE INDEX idx_distress_created_at ON distress_calls(created_at);
