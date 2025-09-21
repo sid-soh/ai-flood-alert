@@ -2,7 +2,7 @@
 
 1. Install dependencies:
 ```bash
-    pip install -r requirements.txt # Change directory to /data before installing
+    pip install -r requirements.txt 
 ```
 
 2. Download and install XAMPP:
