@@ -9,9 +9,13 @@ const dbConfig = {
 };
 
 exports.handler = async (event) => {
+  console.log('Lambda started, event:', JSON.stringify(event));
+  console.log('HTTP Method detected:', event.httpMethod);
+  console.log('Request context method:', event.requestContext?.httpMethod);
+  
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
   };
 
@@ -20,16 +24,27 @@ exports.handler = async (event) => {
   }
 
   try {
-    const connection = await mysql.createConnection(dbConfig);
+    const method = event.httpMethod || event.requestContext?.httpMethod || 'UNKNOWN';
+    console.log('Final method to check:', method);
     
-    if (event.httpMethod === 'POST') {
-      // Create new distress call
+    console.log('Attempting database connection with config:', {
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      database: process.env.DB_NAME
+    });
+    const connection = await mysql.createConnection(dbConfig);
+    console.log('Database connected successfully');
+    
+    if (method === 'POST') {
+      console.log('Processing POST request');
       const { latitude, longitude, message } = JSON.parse(event.body);
+      console.log('Parsed data:', { latitude, longitude, message });
       
       const [result] = await connection.execute(
         'INSERT INTO distress_calls (latitude, longitude, user_message) VALUES (?, ?, ?)',
         [latitude, longitude, message || null]
       );
+      console.log('Insert result:', result);
       
       await connection.end();
       return {
@@ -39,11 +54,19 @@ exports.handler = async (event) => {
       };
     }
     
-    if (event.httpMethod === 'GET') {
-      // Get active distress calls
-      const [calls] = await connection.execute(
-        'SELECT call_id, latitude, longitude, user_message, call_time FROM distress_calls WHERE rescue_status = "PENDING" ORDER BY call_time DESC LIMIT 50'
+    if (method === 'GET' || method === 'UNKNOWN') {
+      console.log('Processing GET request (method was:', method, ')');
+      // First check all records
+      const [allCalls] = await connection.execute(
+        'SELECT call_id, latitude, longitude, user_message, call_time, rescue_status FROM distress_calls ORDER BY call_time DESC LIMIT 50'
       );
+      console.log('All calls in database:', allCalls.length, allCalls);
+      
+      // Try simple query first
+      const [calls] = await connection.execute(
+        'SELECT * FROM distress_calls ORDER BY call_time DESC LIMIT 10'
+      );
+      console.log('Simple query result:', calls.length, calls);
       
       await connection.end();
       return {
@@ -54,18 +77,29 @@ exports.handler = async (event) => {
     }
     
     await connection.end();
+    console.log('No method matched - returning 404');
+    console.log('Available methods: POST, GET');
+    console.log('Received method:', method);
     return {
       statusCode: 404,
       headers,
-      body: JSON.stringify({ error: 'Endpoint not found' })
+      body: JSON.stringify({ 
+        error: 'Endpoint not found',
+        receivedMethod: method,
+        availableMethods: ['GET', 'POST', 'OPTIONS']
+      })
     };
     
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Lambda error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Database operation failed' })
+      body: JSON.stringify({ 
+        error: 'Database operation failed', 
+        details: error.message,
+        code: error.code 
+      })
     };
   }
 };

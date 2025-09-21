@@ -128,19 +128,24 @@ function GetEvacuationInfo() {
     
     navigator.geolocation.getCurrentPosition(async (position) => {
       const { latitude, longitude } = position.coords;
+      console.log('User location:', latitude, longitude);
       
       const affectedAreas = [
         { name: 'Kota Kinabalu City Center', lat: 5.9804, lng: 116.0735, radius: 2000 },
         { name: 'Penampang District', lat: 5.9370, lng: 116.1063, radius: 3000 }
       ];
       
-      const isInAffectedArea = affectedAreas.some(area => {
+      const distances = affectedAreas.map(area => {
         const distance = calculateDistance(latitude, longitude, area.lat, area.lng);
-        return distance <= area.radius;
+        console.log(`Distance to ${area.name}: ${distance}m (limit: ${area.radius}m)`);
+        return { ...area, distance };
       });
       
+      const isInAffectedArea = distances.some(area => area.distance <= area.radius);
+      console.log('Is in affected area:', isInAffectedArea);
+      
       if (!isInAffectedArea) {
-        alert('You are not currently in an affected flood area.');
+        alert(`You are not currently in an affected flood area.\nClosest area: ${distances[0].name} (${Math.round(distances[0].distance)}m away)`);
         return;
       }
       
@@ -148,20 +153,25 @@ function GetEvacuationInfo() {
       if (message === null) return;
       
       try {
+        console.log('Sending distress call:', { latitude, longitude, message });
         const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/distress-calls', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ latitude, longitude, message })
         });
         
+        console.log('Response status:', response.status);
+        const result = await response.json();
+        console.log('Response body:', result);
+        
         if (response.ok) {
           alert('Help request sent successfully! Emergency services have been notified.');
         } else {
-          alert('Failed to send help request. Please try again.');
+          alert(`Failed to send help request: ${result.error || 'Unknown error'}`);
         }
       } catch (error) {
         console.error('Error sending distress call:', error);
-        alert('Failed to send help request. Please try again.');
+        alert('Failed to send help request: ' + error.message);
       }
     }, (error) => {
       alert('Unable to get your location. Please enable location services.');
