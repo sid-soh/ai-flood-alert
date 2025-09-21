@@ -70,6 +70,19 @@ const LiveFloodDashboard = () => {
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      .dashboard-grid > div:nth-child(2) {
+        order: 2;
+      }
+    }
   `;
   
   React.useEffect(() => {
@@ -317,7 +330,7 @@ const LiveFloodDashboard = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+      <div className="dashboard-grid">
         {/* City Status Section */}
         <div>
           <h2 style={{ color: 'white', marginBottom: '20px', fontSize: '22px', fontWeight: '600' }}>🏙️ City Flood Status</h2>

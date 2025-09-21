@@ -17,7 +17,7 @@ const EvacuationInfo = () => {
   }, []);
 
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
-  if (!evacuationPoint) return <p>Click "Find Evacuation Route" to see nearest evacuation point.</p>;
+  if (!evacuationPoint) return;
 
   const { lat, lon, dist, tags } = evacuationPoint;
 

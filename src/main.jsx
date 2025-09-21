@@ -5,9 +5,123 @@ import EvacuationInfo from './EvacuationInfo';
 import NewsDashboard from './NewsDashboard';
 import LiveFloodDashboard from './LiveFloodDashboard';
 
-const title = (
-  <h1>Live Map</h1>
-);
+function TitleWithLegend() {
+  const [showLegend, setShowLegend] = React.useState(false);
+  
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <h1 style={{ margin: '0 15px 0 0' }}>Live Map</h1>
+        <button 
+          onClick={() => setShowLegend(true)}
+          style={{
+            padding: '6px 10px',
+            backgroundColor: '#6c757d',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            '@media (max-width: 768px)': {
+              padding: '4px 8px',
+              fontSize: '11px'
+            }
+          }}
+        >
+          Legend
+        </button>
+      </div>
+      
+      {showLegend && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            maxWidth: '400px',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ margin: '0 0 15px 0', color: '#000' }}>🗺️ Map Legend</h3>
+            
+            <div style={{ marginBottom: '15px' }}>
+              <h4 style={{ margin: '0 0 8px 0', color: '#000' }}>📍 Markers</h4>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                <div style={{ width: '20px', height: '20px', background: '#007bff', borderRadius: '50%', marginRight: '10px' }}></div>
+                <span style={{ color: '#000' }}>Your Location / Selected Location</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                <div style={{ width: '20px', height: '20px', background: '#28a745', borderRadius: '50%', marginRight: '10px' }}></div>
+                <span style={{ color: '#000' }}>🏥 Evacuation Point</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                <div style={{ width: '20px', height: '20px', background: '#dc3545', borderRadius: '50%', marginRight: '10px' }}></div>
+                <span style={{ color: '#000' }}>🚨 Distress Call</span>
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: '15px' }}>
+              <h4 style={{ margin: '0 0 8px 0', color: '#000' }}>🌊 Flood Risk Areas</h4>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                <div style={{ width: '20px', height: '20px', background: 'red', opacity: '0.3', border: '2px solid red', borderRadius: '50%', marginRight: '10px' }}></div>
+                <span style={{ color: '#000' }}>HIGH Risk Zone</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                <div style={{ width: '20px', height: '20px', background: 'yellow', opacity: '0.3', border: '2px solid orange', borderRadius: '50%', marginRight: '10px' }}></div>
+                <span style={{ color: '#000' }}>MEDIUM Risk Zone</span>
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ margin: '0 0 8px 0', color: '#000' }}>🛣️ Routes</h4>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                <div style={{ width: '30px', height: '4px', background: 'blue', marginRight: '10px' }}></div>
+                <span style={{ color: '#000' }}>Safe Evacuation Route</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                <div style={{ width: '30px', height: '4px', background: 'orange', marginRight: '10px' }}></div>
+                <span style={{ color: '#000' }}>Medium Risk Route</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '30px', height: '4px', background: 'red', marginRight: '10px' }}></div>
+                <span style={{ color: '#000' }}>High Risk Route</span>
+              </div>
+            </div>
+            
+            <div style={{ textAlign: 'center' }}>
+              <button 
+                onClick={() => setShowLegend(false)}
+                style={{
+                  padding: '8px 16px',
+                  background: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const title = <TitleWithLegend />;
 
 function DisplayMap() {
   return (
@@ -21,13 +135,13 @@ function GetMapInfo() {
   return (
     <div>
       <LocationSelector />
-      <p>This map shows your location in real-time as well as the closest evacuation point to you.</p>
       <GetEvacuationInfo />
     </div>
   );
 }
 
 function LocationSelector() {
+  
   const handleLocationChange = (location) => {
     const trySetLocation = () => {
       if (window.setMapLocation) {
@@ -41,7 +155,8 @@ function LocationSelector() {
 
   return (
     <div style={{ marginBottom: '15px' }}>
-      <h3>Choose Location</h3>
+      <h2>Choose Location</h2>
+      <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#6c757d' }}>Select your location method to view flood risks and find evacuation routes</p>
       <button 
         onClick={() => handleLocationChange('gps')}
         style={{
@@ -54,13 +169,12 @@ function LocationSelector() {
           cursor: 'pointer'
         }}
       >
-        Use My Location
+        📍 Use GPS Location
       </button>
       <button 
         onClick={() => handleLocationChange({ lat: 5.96941, lng: 116.09044, name: 'Sabah (Flood Crisis)' })}
         style={{
           padding: '8px 16px',
-          marginRight: '10px',
           backgroundColor: '#dc3545',
           color: 'white',
           border: 'none',
@@ -68,28 +182,16 @@ function LocationSelector() {
           cursor: 'pointer'
         }}
       >
-        View Sabah Flood Crisis
+        🌊 View Sabah Crisis Area
       </button>
-      <button 
-        onClick={() => window.performFloodAnalysis && window.performFloodAnalysis(5.96941, 116.09044)}
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#fd7e14',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        AI Flood Analysis
-      </button>
+
     </div>
   );
 }
 
 function GetEvacuationInfo() {
   const [aiAnalysis, setAiAnalysis] = React.useState('');
-  const [floodAnalysis, setFloodAnalysis] = React.useState('');
+
   const [distressCallsVisible, setDistressCallsVisible] = React.useState(false);
   
   React.useEffect(() => {
@@ -105,18 +207,9 @@ function GetEvacuationInfo() {
       }
     };
     
-    const handleFloodAnalysis = (event) => {
-      const analysis = event.detail.analysis;
-      if (analysis) {
-        setFloodAnalysis(analysis);
-      }
-    };
-    
     window.addEventListener('evacuationFound', handleEvacuationFound);
-    window.addEventListener('floodAnalysisComplete', handleFloodAnalysis);
     return () => {
       window.removeEventListener('evacuationFound', handleEvacuationFound);
-      window.removeEventListener('floodAnalysisComplete', handleFloodAnalysis);
     };
   }, []);
   
@@ -198,100 +291,95 @@ function GetEvacuationInfo() {
   
   return (
     <div>
-      <button 
-        onClick={() => window.showEvacuationRoute && window.showEvacuationRoute()}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          marginBottom: '10px',
-          marginRight: '10px'
-        }}
-      >
-        Find Evacuation Route
-      </button>
-      
-      <button 
-        onClick={handleCallForHelp}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#dc3545',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          marginBottom: '10px',
-          marginRight: '10px'
-        }}
-      >
-        Call for Help
-      </button>
-      
-      <button 
-        onClick={toggleDistressCalls}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: distressCallsVisible ? '#6c757d' : '#28a745',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          marginBottom: '10px',
-          marginRight: '10px'
-        }}
-      >
-        {distressCallsVisible ? 'Hide Distress Calls' : 'Show Distress Calls'}
-      </button>
-      
-      <button 
-        onClick={() => window.showFloodAnalysis && window.showFloodAnalysis()}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#6f42c1',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          marginBottom: '15px'
-        }}
-      >
-        Show Flood Risk Areas
-      </button>
-      
-      {aiAnalysis && (
-        <div style={{
-          backgroundColor: '#f8f9fa',
-          border: '1px solid #dee2e6',
-          borderRadius: '4px',
-          padding: '15px',
-          marginBottom: '15px',
-          fontSize: '14px',
-          lineHeight: '1.5'
-        }}>
-          <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>AI Route Analysis</h4>
-          <p style={{ margin: 0, color: '#6c757d' }}>{aiAnalysis}</p>
-        </div>
-      )}
-      
-      {floodAnalysis && (
-        <div style={{
-          backgroundColor: '#fff3cd',
-          border: '1px solid #ffeaa7',
-          borderRadius: '4px',
-          padding: '15px',
-          marginBottom: '15px',
-          fontSize: '14px',
-          lineHeight: '1.5'
-        }}>
-          <h4 style={{ margin: '0 0 10px 0', color: '#856404' }}>🌊 AI Flood Risk Analysis</h4>
-          <p style={{ margin: 0, color: '#856404' }}>{floodAnalysis}</p>
-        </div>
-      )}
-      
-      <EvacuationInfo />
+      {/* Emergency Actions */}
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ margin: '0 0 8px 0', color: '#dc3545' }}>🚨 Emergency Actions</h2>
+        <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#6c757d' }}>The map will find the closest shelter and AI will assess evacuation route risks</p>
+        <button 
+          onClick={() => {
+            window.showEvacuationRoute && window.showEvacuationRoute();
+          }}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginRight: '10px'
+          }}
+        >
+          🤖 Find Evacuation Route + AI Analysis
+        </button>
+        
+        <button 
+          onClick={handleCallForHelp}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#dc3545',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Call for Help
+        </button>
+        
+
+        
+        {aiAnalysis && (
+          <div style={{
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderRadius: '4px',
+            padding: '15px',
+            marginTop: '15px',
+            fontSize: '14px',
+            lineHeight: '1.5'
+          }}>
+            <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>AI Route Analysis</h4>
+            <p style={{ margin: 0, color: '#6c757d' }}>{aiAnalysis}</p>
+          </div>
+        )}
+        
+        <EvacuationInfo />
+      </div>
+
+      {/* Map Display Options */}
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ margin: '0 0 8px 0', color: '#28a745' }}>🗺️ Map Display Options</h2>
+        <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#6c757d' }}>Show different information layers on the map</p>
+        <button 
+          onClick={toggleDistressCalls}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: distressCallsVisible ? '#6c757d' : '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginRight: '10px'
+          }}
+        >
+          {distressCallsVisible ? 'Hide Distress Calls' : 'Show Distress Calls'}
+        </button>
+        
+        <button 
+          onClick={() => window.showFloodAnalysis && window.showFloodAnalysis()}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#6f42c1',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Refresh Flood Risk Areas
+        </button>
+      </div>
+
     </div>
   );
 }

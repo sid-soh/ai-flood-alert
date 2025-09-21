@@ -24,10 +24,7 @@
       <button id="nav-btn"><img src="/src/assets/bit-bugs-logo-white-2.png" alt="Bit Bugs Logo" id="nav-logo" /></button>
       <div id="empty"></div>
       <button id="nav-btn">Map</button>
-      <button id="nav-btn">Call for help</button>
-      <button id="nav-btn">News Dashboard</button>
       <button id="nav-btn">Live Monitor</button>
-      <button id="nav-btn">About</button>
       <button id="theme-toggle">Light Mode</button>
     </div>
     
@@ -40,10 +37,7 @@
         </div>
         <div id="mobile-menu-items">
           <button class="mobile-nav-btn">Map</button>
-          <button class="mobile-nav-btn">Call for help</button>
-          <button class="mobile-nav-btn">News Dashboard</button>
           <button class="mobile-nav-btn">Live Monitor</button>
-          <button class="mobile-nav-btn">About</button>
           <button id="mobile-theme-toggle">Light Mode</button>
         </div>
       </div>
@@ -82,10 +76,7 @@
           if (index === 1) { // Map button
             console.log('Calling showPage(map)');
             window.showPage && window.showPage('map');
-          } else if (index === 3) { // News Dashboard button
-            console.log('Calling showPage(news)');
-            window.showPage && window.showPage('news');
-          } else if (index === 4) { // Live Monitor button
+          } else if (index === 2) { // Live Monitor button
             console.log('Calling showPage(live)');
             window.showPage && window.showPage('live');
           }
@@ -97,9 +88,7 @@
         button.addEventListener('click', function() {
           if (index === 0) { // Map button
             window.showPage && window.showPage('map');
-          } else if (index === 2) { // News Dashboard button
-            window.showPage && window.showPage('news');
-          } else if (index === 3) { // Live Monitor button
+          } else if (index === 1) { // Live Monitor button
             window.showPage && window.showPage('live');
           }
           closeMobileMenu();

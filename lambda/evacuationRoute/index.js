@@ -136,19 +136,23 @@ function getOSRMRoute(start, end) {
 async function enhanceWithBedrock(osrmResult, start, end) {
   console.log('Starting Bedrock AI analysis...');
   
-  const prompt = `Analyze this flood evacuation route and assess safety:
+  // Fetch current flood status
+  const floodStatus = await getCurrentFloodStatus();
+  
+  const prompt = `Analyze this evacuation route based on current flood conditions:
 
-START: [${start[0]}, ${start[1]}]
-DESTINATION: [${end[0]}, ${end[1]}]
-DISTANCE: ${osrmResult.routeDistance}m
-DURATION: ${osrmResult.routeDuration}s
+ROUTE DETAILS:
+- Start: [${start[0]}, ${start[1]}]
+- Destination: [${end[0]}, ${end[1]}]
+- Distance: ${(osrmResult.routeDistance/1000).toFixed(1)}km
+- Duration: ${Math.round(osrmResult.routeDuration/60)} minutes
 
-Flood zones in Sabah area:
-- Kota Kinabalu City Center: HIGH risk
-- Coastal roads: MEDIUM risk
-- Penampang District: LOW risk
+CURRENT FLOOD STATUS:
+${floodStatus}
 
-Assess risk level (LOW/MEDIUM/HIGH) and provide specific warnings. Return only the risk level and one warning.`;
+Route passes through these coordinates: ${osrmResult.osrmGeometry.coordinates.slice(0, 5).map(coord => `[${coord[1]}, ${coord[0]}]`).join(', ')}
+
+Assess the evacuation route risk level (LOW/MEDIUM/HIGH) and suggest precautions to take along this route. Only return the risk level and two precautions to take.`;
 
   try {
     console.log('Creating Bedrock command with model: amazon.titan-text-express-v1');
@@ -201,6 +205,49 @@ Assess risk level (LOW/MEDIUM/HIGH) and provide specific warnings. Return only t
       warnings: [`AI unavailable: ${error.name} - ${error.message}`]
     };
   }
+}
+
+async function getCurrentFloodStatus() {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'rt7id5217i.execute-api.ap-southeast-5.amazonaws.com',
+      port: 443,
+      path: '/prod/flood-status',
+      method: 'GET',
+      timeout: 5000
+    };
+    
+    const req = https.request(options, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(data);
+          const statusText = result.cities?.map(city => 
+            `${city.name}: ${city.riskLevel} risk (${city.accuracy}% accuracy)`
+          ).join('\n') || 'Flood data unavailable';
+          resolve(statusText);
+        } catch (e) {
+          resolve('Flood status unavailable');
+        }
+      });
+    });
+    
+    req.on('error', () => {
+      resolve('Flood status unavailable');
+    });
+    
+    req.on('timeout', () => {
+      req.destroy();
+      resolve('Flood status unavailable');
+    });
+    
+    req.end();
+  });
 }
 
 function calculateDistance(start, end) {
