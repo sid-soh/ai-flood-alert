@@ -1,5 +1,7 @@
 # RapidResponse 🌊
 
+Submission for the Great Malaysia AI Hackathon 2025.
+
 An AI-powered flood monitoring and emergency response system for Sabah, Malaysia. RapidResponse provides real-time flood risk assessment, intelligent evacuation routing, and emergency assistance coordination.
 
 ## 🚀 Features
@@ -155,19 +157,3 @@ The application is designed for AWS deployment with:
 2. Create a feature branch
 3. Make your changes
 4. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Emergency Use
-
-RapidResponse is designed for emergency flood situations in Sabah, Malaysia. In case of actual emergencies, always contact local emergency services directly.
-
-**Emergency Contacts:**
-- Malaysia Emergency: 999
-- Flood Hotline: 1-800-88-9999
-
----
-
-Built with ❤️ for flood safety and emergency response in Sabah, Malaysia.
