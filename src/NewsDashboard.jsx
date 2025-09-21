@@ -5,6 +5,8 @@ const NewsDashboard = () => {
   const [twitterData, setTwitterData] = useState(null);
   const [weatherData, setWeatherData] = useState(null);
   const [officialNews, setOfficialNews] = useState(null);
+  const [liveTweets, setLiveTweets] = useState([]);
+  const [currentTweetIndex, setCurrentTweetIndex] = useState(0);
 
   useEffect(() => {
     // Simulate data loading
@@ -44,8 +46,37 @@ const NewsDashboard = () => {
           summary: '15 emergency shelters now operational with capacity for 5,000 evacuees.'
         }
       ]);
+      
+      // Fetch live tweets from database
+      fetchLiveTweets();
     }, 1000);
   }, []);
+  
+  const fetchLiveTweets = async () => {
+    try {
+      const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/tweets');
+      const result = await response.json();
+      setLiveTweets(result.tweets || []);
+    } catch (error) {
+      console.error('Error fetching tweets:', error);
+      // Fallback mock data
+      setLiveTweets([
+        { content: 'Heavy flooding in Kota Kinabalu city center. Roads impassable. #SabahFloods', post_time: new Date().toISOString(), likes_count: 45 },
+        { content: 'Emergency shelters open at Penampang Community Center. Please spread the word! #FloodRelief', post_time: new Date().toISOString(), likes_count: 78 },
+        { content: 'Water level rising rapidly near Likas Bay area. Residents advised to evacuate immediately.', post_time: new Date().toISOString(), likes_count: 123 }
+      ]);
+    }
+  };
+  
+  useEffect(() => {
+    if (liveTweets.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentTweetIndex((prev) => (prev + 1) % liveTweets.length);
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [liveTweets]);
 
   return (
     <div className="news-dashboard" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -167,6 +198,40 @@ const NewsDashboard = () => {
             </div>
           ) : (
             <div style={{color: 'black'}}>Loading weather data...</div>
+          )}
+        </div>
+
+        {/* Live Tweet Feed Box */}
+        <div style={{ 
+          border: '1px solid #dee2e6', 
+          borderRadius: '8px', 
+          padding: '20px',
+          backgroundColor: 'rgba(244, 244, 244, 1)'
+        }}>
+          <h3 style={{ color: '#1da1f2', marginTop: '0' }}>📱 Live Tweet Feed</h3>
+          {liveTweets.length > 0 ? (
+            <div style={{ color: 'black', minHeight: '150px' }}>
+              <div style={{
+                padding: '15px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                border: '1px solid #e9ecef',
+                marginBottom: '10px'
+              }}>
+                <div style={{ fontSize: '14px', lineHeight: '1.4', marginBottom: '10px' }}>
+                  {liveTweets[currentTweetIndex]?.content}
+                </div>
+                <div style={{ fontSize: '12px', color: '#6c757d', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{new Date(liveTweets[currentTweetIndex]?.post_time).toLocaleString()}</span>
+                  <span>❤️ {liveTweets[currentTweetIndex]?.likes_count || 0}</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'center', fontSize: '12px', color: '#6c757d' }}>
+                Tweet {currentTweetIndex + 1} of {liveTweets.length} • Updates every 5 seconds
+              </div>
+            </div>
+          ) : (
+            <div style={{ color: 'black' }}>Loading live tweets...</div>
           )}
         </div>
 
