@@ -239,26 +239,10 @@ function GetEvacuationInfo() {
           border: 'none',
           borderRadius: '4px',
           cursor: 'pointer',
-          marginBottom: '10px',
-          marginRight: '10px'
-        }}
-      >
-        {distressCallsVisible ? 'Hide Distress Calls' : 'Show Distress Calls'}
-      </button>
-      
-      <button 
-        onClick={() => window.showFloodAnalysis && window.showFloodAnalysis()}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#6f42c1',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
           marginBottom: '15px'
         }}
       >
-        Show Flood Risk Areas
+        {distressCallsVisible ? 'Hide Distress Calls' : 'Show Distress Calls'}
       </button>
       
       {aiAnalysis && (

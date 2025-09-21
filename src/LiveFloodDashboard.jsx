@@ -96,40 +96,11 @@ const LiveFloodDashboard = () => {
     try {
       const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/flood-status');
       const result = await response.json();
-      
-      // Transform API response to match component expectations
-      const transformedData = {
-        success: true,
-        totalCities: result.totalCities || result.cities?.length || 0,
-        sabahFloodStatus: result.cities?.map(city => ({
-          city: city.name,
-          floodChancePercent: city.accuracy,
-          floodStatus: city.riskLevel === 'HIGH' ? 'FLOODING' : 'NO_FLOOD',
-          tweetCount: Math.floor(Math.random() * 50) + 5,
-          floodTweetCount: Math.floor(Math.random() * 20),
-          govSeverity: city.riskLevel,
-          timestamps: {
-            tweetTime24h: new Date().toLocaleTimeString('en-GB', { hour12: false }),
-            govTime24h: new Date(Date.now() - Math.random() * 3600000).toLocaleTimeString('en-GB', { hour12: false }),
-            timeGap: `${Math.floor(Math.random() * 2)} hr ${Math.floor(Math.random() * 60)} min`,
-            dataFreshness: {
-              tweetAge: `${Math.floor(Math.random() * 30)} min ago`,
-              govAge: `${Math.floor(Math.random() * 60)} min ago`
-            }
-          },
-          aiReasoning: city.riskLevel === 'HIGH' ? 
-            'High flood risk based on meteorological data and social media activity' :
-            city.riskLevel === 'MEDIUM' ?
-            'Moderate risk with some concerning indicators' :
-            'Low risk based on current data analysis'
-        })) || []
-      };
-      
-      setFloodData(transformedData);
+      setFloodData(result);
       
       // Update sorted cities with smooth transitions
-      if (transformedData.sabahFloodStatus) {
-        updateCitiesWithAnimation(transformedData.sabahFloodStatus);
+      if (result.sabahFloodStatus) {
+        updateCitiesWithAnimation(result.sabahFloodStatus);
       }
       
       setLastUpdate(new Date());
@@ -194,55 +165,46 @@ const LiveFloodDashboard = () => {
     };
   };
 
-  // Generate mock tweets for demo
-  const generateMockTweets = () => {
-    const cities = ['Kota Kinabalu', 'Sandakan', 'Tawau', 'Penampang'];
-    const users = ['ahmad_kk', 'siti_sabah', 'john_borneo', 'maria_east'];
+  // Simulate new tweets
+  const simulateNewTweet = () => {
+    const cities = ['Kota Kinabalu', 'Sandakan', 'Penampang', 'Tawau'];
+    const usernames = [
+      'ahmad_kk', 'siti_sabah', 'john_borneo', 'maria_east', 'hassan_my',
+      'lina_weather', 'david_news', 'fatimah88', 'peter_local', 'aisha_updates'
+    ];
     const floodTexts = [
       'Heavy rain causing street flooding 🌧️',
-      'Hujan lebat menyebabkan banjir kilat',
-      'Water levels rising in city center!',
-      'Emergency services responding to flood calls 🚨'
+      'Hujan lebat menyebabkan banjir kilat di jalan raya',
+      'Water levels rising in city center! Stay safe everyone',
+      'Paras air naik di pusat bandar - semua berhati-hati',
+      'Emergency services responding to flood calls 🚨',
+      'Road closures due to flash floods - avoid downtown area'
     ];
-    
-    return Array.from({length: 8}, (_, i) => ({
-      id: `mock_${Date.now()}_${i}`,
-      city: cities[i % cities.length],
-      username: users[i % users.length],
-      text: floodTexts[i % floodTexts.length],
-      time: new Date(Date.now() - i * 300000).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }),
-      isFlood: true,
-      likes: Math.floor(Math.random() * 50),
-      retweets: Math.floor(Math.random() * 20)
-    }));
-  };
+    const normalTexts = [
+      'Weather clearing up nicely ☀️',
+      'Cuaca menjadi cerah dengan baik',
+      'Traffic flowing smoothly today',
+      'Perfect weather for a morning jog',
+      'Coffee shops busy as usual ☕',
+      'Great sunset view from my balcony 🌅'
+    ];
 
-  // Fetch tweets with fallback to mock data
-  const fetchLiveTweets = async () => {
-    try {
-      const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/tweets');
-      if (response.ok) {
-        const result = await response.json();
-        if (result.tweets && result.tweets.length > 0) {
-          const formattedTweets = result.tweets.map((tweet, index) => ({
-            id: `db_${Date.now()}_${index}`,
-            city: tweet.location_name || 'Sabah',
-            username: `user_${Math.random().toString(36).substr(2, 6)}`,
-            text: tweet.content,
-            time: new Date(tweet.post_time).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }),
-            isFlood: tweet.content.toLowerCase().includes('flood') || tweet.content.toLowerCase().includes('banjir'),
-            likes: tweet.likes_count || 0,
-            retweets: tweet.retweets_count || 0
-          }));
-          setLiveTweets(formattedTweets.slice(0, 10));
-          return;
-        }
-      }
-    } catch (error) {
-      console.log('API failed, using mock data:', error.message);
-    }
-    // Fallback to mock data
-    setLiveTweets(generateMockTweets());
+    const city = cities[Math.floor(Math.random() * cities.length)];
+    const username = usernames[Math.floor(Math.random() * usernames.length)];
+    const isFlood = Math.random() < 0.4;
+    const texts = isFlood ? floodTexts : normalTexts;
+    const text = texts[Math.floor(Math.random() * texts.length)];
+
+    const newTweet = {
+      id: Date.now(),
+      city,
+      username,
+      text,
+      time: new Date().toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }),
+      isFlood
+    };
+
+    setLiveTweets(prev => [newTweet, ...prev.slice(0, 9)]); // Keep last 10 tweets
   };
 
   // Set up intervals
@@ -250,18 +212,22 @@ const LiveFloodDashboard = () => {
     // Initial fetch
     fetchFloodData();
 
-    // Fetch initial tweets
-    fetchLiveTweets();
-    
     // Update flood data every 2 minutes
     const floodInterval = setInterval(fetchFloodData, 2 * 60 * 1000);
     
-    // Update tweets every 30 seconds
-    const tweetInterval = setInterval(fetchLiveTweets, 30 * 1000);
+    // Schedule next tweet with random interval
+    const scheduleNextTweet = () => {
+      const randomInterval = Math.random() * (10000 - 2000) + 2000; // 2s to 10s
+      setTimeout(() => {
+        simulateNewTweet();
+        scheduleNextTweet(); // Schedule the next one
+      }, randomInterval);
+    };
+    
+    scheduleNextTweet(); // Start the random tweet scheduling
 
     return () => {
       clearInterval(floodInterval);
-      clearInterval(tweetInterval);
     };
   }, []);
 
@@ -553,15 +519,9 @@ const LiveFloodDashboard = () => {
                     </div>
                     <span style={{ fontSize: '12px', color: '#6c757d' }}>{tweet.time}</span>
                   </div>
-                  <div style={{ fontSize: '14px', color: '#495057', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '14px', color: '#495057' }}>
                     {tweet.isFlood ? '🚨' : '💬'} {tweet.text}
                   </div>
-                  {(tweet.likes > 0 || tweet.retweets > 0) && (
-                    <div style={{ fontSize: '12px', color: '#6c757d', display: 'flex', gap: '12px' }}>
-                      {tweet.likes > 0 && <span>❤️ {tweet.likes}</span>}
-                      {tweet.retweets > 0 && <span>🔁 {tweet.retweets}</span>}
-                    </div>
-                  )}
                 </div>
               ))
             )}

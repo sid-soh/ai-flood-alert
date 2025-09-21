@@ -1,9 +1,10 @@
 {
   "name": "flood-analysis",
   "version": "1.0.0",
+  "description": "Flood risk analysis and evacuation point finder",
   "main": "index.js",
+  "type": "module",
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.0.0",
-    "mysql2": "^3.15.0"
+    "mysql2": "^3.6.0"
   }
 }
