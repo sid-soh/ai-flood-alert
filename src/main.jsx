@@ -5,6 +5,9 @@ import EvacuationInfo from './EvacuationInfo';
 import NewsDashboard from './NewsDashboard';
 import LiveFloodDashboard from './LiveFloodDashboard';
 
+// Import black logo to ensure it's included in build
+import blackLogo from './assets/bit-bugs-logo-black-2.png';
+
 function TitleWithLegend() {
   const [showLegend, setShowLegend] = React.useState(false);
   
