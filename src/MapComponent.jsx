@@ -321,6 +321,106 @@ const MapComponent = () => {
                 ${call.user_message ? `💬 ${call.user_message}` : '📍 Location assistance needed'}
               </div>
             `);
+            return marker;
+          });
+          
+          setDistressMarkers(markers);
+        } catch (error) {
+          console.error('Error fetching distress calls:', error);
+          alert('Error fetching distress calls: ' + error.message);
+        }
+      } else {
+        distressMarkers.forEach(marker => {
+          mapInstanceRef.current.removeLayer(marker);
+        });
+        setDistressMarkers([]);
+      }
+    };
+    
+    const getCityRadius = async (cityName, lat, lng) => {
+      try {
+        const overpassQuery = `
+          [out:json][timeout:25];
+          (
+            relation["name"="${cityName}"]["place"~"city|town"]["admin_level"~"8|9|10"](around:50000,${lat},${lng});
+            way["name"="${cityName}"]["place"~"city|town"](around:50000,${lat},${lng});
+          );
+          out geom;
+        `;
+        
+        const response = await fetch('https://overpass-api.de/api/interpreter', {
+          method: 'POST',
+          body: overpassQuery
+        });
+        
+        const data = await response.json();
+        
+        if (data.elements && data.elements.length > 0) {
+          const element = data.elements[0];
+          
+          // Calculate approximate radius from bounding box
+          if (element.bounds) {
+            const { minlat, minlon, maxlat, maxlon } = element.bounds;
+            const width = (maxlon - minlon) * 111320 * Math.cos(lat * Math.PI / 180);
+            const height = (maxlat - minlat) * 110540;
+            return Math.max(width, height) / 2;
+          }
+        }
+        
+        // Default radius if no data found
+        return 5000;
+      } catch (error) {
+        console.error('Error fetching city data:', error);
+        return 5000;
+      }
+    };
+    
+    const showFloodAnalysis = async () => {
+      try {
+        const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/flood-analysis', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'getFloodData' })
+        });
+        
+        const floodData = await response.json();
+        
+        // Remove existing circles
+        floodCircles.forEach(circle => {
+          mapInstanceRef.current.removeLayer(circle);
+        });
+        
+        // Add new circles with dynamic radius
+        const circles = await Promise.all(floodData.cities.map(async (city) => {
+          const color = city.accuracy >= 80 ? 'red' : city.accuracy >= 60 ? 'yellow' : 'green';
+          const radius = await getCityRadius(city.name, city.lat, city.lng);
+          
+          const circle = L.circle([city.lat, city.lng], {
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.3,
+            radius: radius
+          }).addTo(mapInstanceRef.current)
+          .bindPopup(`
+            <div>
+              <strong>${city.name}</strong><br>
+              Flood Accuracy: ${city.accuracy}%<br>
+              Risk Level: ${city.accuracy >= 80 ? 'High' : city.accuracy >= 60 ? 'Medium' : 'Low'}<br>
+              Coverage: ${Math.round(radius/1000)}km radius
+            </div>
+          `);
+          
+          return circle;
+        }));        
+        setFloodCircles(circles);
+      } catch (error) {
+        console.error('Error fetching flood analysis:', error);
+      }
+    };
+    
+    window.showEvacuationRoute = showEvacuationRoute;
+    window.toggleDistressCalls = toggleDistressCalls;
+    window.showFloodAnalysis = showFloodAnalysis;
                     });
 
                     setDistressMarkers(markers);
@@ -339,6 +439,12 @@ const MapComponent = () => {
         window.showEvacuationRoute = showEvacuationRoute;
         window.toggleDistressCalls = toggleDistressCalls;
 
+    return () => {
+      delete window.showEvacuationRoute;
+      delete window.toggleDistressCalls;
+      delete window.showFloodAnalysis;
+    };
+  }, [userLocation, distressMarkers]);
         return () => {
             delete window.showEvacuationRoute;
             delete window.toggleDistressCalls;
