@@ -35,13 +35,7 @@ const MapComponent = () => {
     popupAnchor: [0, -32], // Position of the popup relative to icon
   });
   
-  // Custom icon for distress calls
-  const distressIcon = L.divIcon({
-    html: '<div style="background-color: #dc3545; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">!</div>',
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-    popupAnchor: [0, -10]
-  });
+
 
   useEffect(() => {
     // Initialize the map
@@ -219,18 +213,31 @@ const MapComponent = () => {
       if (show) {
         try {
           const response = await fetch('https://rt7id5217i.execute-api.ap-southeast-5.amazonaws.com/prod/distress-calls');
-          const distressCalls = await response.json();
+          const result = await response.json();
+          const distressCalls = result.calls || [];
           
           const markers = distressCalls.map(call => {
-            const marker = L.marker([call.latitude, call.longitude], { icon: distressIcon })
-              .addTo(mapInstanceRef.current)
-              .bindPopup(`
-                <div>
-                  <strong>Distress Call</strong><br>
-                  <small>${new Date(call.created_at).toLocaleString()}</small><br>
-                  ${call.user_message ? `Message: ${call.user_message}` : 'No message provided'}
-                </div>
-              `);
+            const marker = L.marker([call.latitude, call.longitude], {
+              icon: L.icon({
+                iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <circle cx="12" cy="12" r="10" fill="#dc3545" stroke="white" stroke-width="2"/>
+                    <text x="12" y="16" text-anchor="middle" fill="white" font-size="14" font-weight="bold">!</text>
+                  </svg>
+                `),
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+                popupAnchor: [0, -12]
+              })
+            })
+            .addTo(mapInstanceRef.current)
+            .bindPopup(`
+              <div>
+                <strong>🚨 Distress Call</strong><br>
+                <small>📅 ${new Date(call.call_time).toLocaleString()}</small><br>
+                ${call.user_message ? `💬 ${call.user_message}` : '📍 Location assistance needed'}
+              </div>
+            `);
             return marker;
           });
           
