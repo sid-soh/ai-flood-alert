@@ -17,7 +17,7 @@ CREATE TABLE keyword (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Locations table (updated to match Python code)
+-- Locations table
 CREATE TABLE location (
     location_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,

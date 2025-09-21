@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, WebDriverException
-from db_integration import DatabaseIntegration
+from rds_connector import get_rds_connection
 
 
 class XScrapper:
@@ -148,43 +148,59 @@ class XScrapper:
             print(f"Starting to collect tweets (target: {limit})...")
 
             while len(alerts) < limit and stagnant_scrolls < max_stagnant:
-                articles = self.driver.find_elements(By.XPATH, '//article[@role="article"]')
-                new_in_pass = 0
+                if len(alerts) >= limit:
+                    break
+                # Try multiple selectors for tweets
+                tweet_selectors = [
+                    '//article[@data-testid="tweet"]',
+                    '//div[@data-testid="tweet"]',
+                    '//article[@role="article"]',
+                    '//div[contains(@class, "css-175oi2r") and .//div[@data-testid="tweetText"]]'
+                ]
 
-                for art in articles:
-                    if len(alerts) >= limit:
+                articles = []
+                for selector in tweet_selectors:
+                    articles = self.driver.find_elements(By.XPATH, selector)
+                    if articles:
+                        print(f"Found {len(articles)} articles using selector: {selector}")
                         break
 
+                if not articles:
+                    print("No articles found with any selector. Checking page source...")
+                    # Debug: Check if we're on the right page
+                    current_url = self.driver.current_url
+                    page_title = self.driver.title
+                    print(f"Current URL: {current_url}")
+                    print(f"Page title: {page_title}")
+
+                    # Check for common X elements
+                    common_elements = self.driver.find_elements(By.XPATH, '//div[@data-testid]')
+                    if common_elements:
+                        test_ids = [elem.get_attribute('data-testid') for elem in common_elements[:10]]
+                        print(f"Found testids: {test_ids}")
+
+                new_in_pass = 0
+                for art in articles:
                     try:
-                        # Parse tweet data
                         data = TweetParser.parse_tweet(art)
 
-                        # Skip if no content
-                        if not data.get('content', '').strip():
+                        if not data.get('content'):
                             continue
 
-                        # Check for must_have_keywords
-                        if must_have_keywords and not TweetParser.contains_keywords(data['content'], must_have_keywords):
+                        # Check for keywords
+                        if not TweetParser.contains_keywords(data['content'], must_have_keywords):
                             continue
 
-                        # Extract tweet ID for duplicate checking
-                        tweet_id = None
+                        # Deduplicate by URL
+                        if data.get('url') and data['url'] in seen_ids:
+                            continue
+
                         if data.get('url'):
-                            match = re.search(r'/status/(\d+)', data['url'])
-                            if match:
-                                tweet_id = match.group(1)
+                            seen_ids.add(data['url'])
 
-                        # Skip duplicates
-                        if tweet_id and tweet_id in seen_ids:
-                            continue
-
-                        # Add to results
                         alerts.append(data)
-
-                        if tweet_id:
-                            seen_ids.add(tweet_id)
-
                         new_in_pass += 1
+
                         content_preview = data['content'][:70] + '...' if len(data['content']) > 70 else data['content']
                         print(f'[{len(alerts)}/{limit}] @{data.get("username","unknown")}: {content_preview}')
 
@@ -665,6 +681,43 @@ class TweetParser:
         return data
 
 
+def save_tweets_to_rds(tweets):
+    """Save tweets to RDS database"""
+    conn = get_rds_connection()
+    saved = 0
+
+    try:
+        with conn.cursor() as cursor:
+            # Ensure source exists
+            cursor.execute("INSERT IGNORE INTO source (name, type) VALUES ('X', 'SOCIAL_MEDIA')")
+
+            for tweet in tweets:
+                query = """
+                INSERT IGNORE INTO x_post
+                (source_id, original_id, content, post_time, url, likes_count, retweets_count, replies_count, views_count)
+                VALUES (1, %s, %s, NOW(), %s, %s, %s, %s, %s)
+                """
+
+                tweet_id = tweet.get('url', '').split('/')[-1] if tweet.get('url') else str(hash(tweet.get('content', '')))
+
+                cursor.execute(query, (
+                    tweet_id,
+                    tweet.get('content', ''),
+                    tweet.get('url', ''),
+                    tweet.get('likes', 0),
+                    tweet.get('retweets', 0),
+                    tweet.get('replies', 0),
+                    tweet.get('views', 0)
+                ))
+                saved += cursor.rowcount
+
+            conn.commit()
+    finally:
+        conn.close()
+
+    return saved
+
+
 def main():
     """Main execution function."""
     print('\n' + '=' * 50)
@@ -706,8 +759,7 @@ def main():
 
             # Save to database
             try:
-                db = DatabaseIntegration()
-                saved_count = db.save_tweets_to_db(alerts)
+                saved_count = save_tweets_to_rds(alerts)
                 print(f"Saved {saved_count} tweets to database.")
             except Exception as e:
                 print(f"Error saving to database: {e}")
