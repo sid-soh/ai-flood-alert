@@ -1,47 +1,62 @@
 import express from 'express';
 import cors from 'cors';
+import { handler as floodAnalysisHandler } from './floodAnalysis-lambda.js';
+import { handler as sabahFloodHandler } from './sabahFloodStatus-lambda.js';
 
 const app = express();
+const PORT = 3000;
+
 app.use(cors());
 app.use(express.json());
 
-app.post('/optimize-route', (req, res) => {
-  console.log('Received optimize-route request:', req.body);
-  const { start, end } = req.body || {};
-  
-  const mockRoute = {
-    waypoints: [
-      { lat: start[0], lng: start[1] },
-      { lat: end[0], lng: end[1] }
-    ],
-    riskLevel: "LOW",
-    warnings: ["Mock route - using direct path"],
-    estimatedTime: "15 minutes",
-    osrmGeometry: {
-      type: "LineString",
-      coordinates: [[start[1], start[0]], [end[1], end[0]]]
-    },
-    routeDistance: 5.2,
-    routeDuration: 15
-  };
-  
-  res.json(mockRoute);
+// Flood Analysis endpoint
+app.post('/flood-analysis', async (req, res) => {
+  try {
+    console.log('🔄 Flood analysis request received');
+    const event = {
+      httpMethod: 'POST',
+      body: JSON.stringify(req.body)
+    };
+    
+    const result = await floodAnalysisHandler(event);
+    const data = JSON.parse(result.body);
+    
+    res.status(result.statusCode).json(data);
+  } catch (error) {
+    console.error('❌ Flood analysis error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.post('/flood-analysis', (req, res) => {
-  const { latitude, longitude } = req.body;
-  res.json({
-    riskLevel: 'MEDIUM',
-    evacuationPoints: [
-      { name: 'Community Center', lat: latitude + 0.01, lng: longitude + 0.01 }
-    ]
+// Sabah Flood Status endpoint
+app.post('/sabah-flood-status', async (req, res) => {
+  try {
+    console.log('🔄 Sabah flood status request received');
+    const result = await sabahFloodHandler(req.body || {});
+    const data = JSON.parse(result.body);
+    
+    res.status(result.statusCode).json(data);
+  } catch (error) {
+    console.error('❌ Sabah flood status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    endpoints: ['/flood-analysis', '/sabah-flood-status']
   });
 });
 
-app.get('/', (req, res) => {
-  res.json({ status: 'Mock server running', endpoints: ['/optimize-route', '/flood-analysis'] });
+app.listen(PORT, () => {
+  console.log(`🚀 Mock Server running on http://localhost:${PORT}`);
+  console.log(`📊 Endpoints:`);
+  console.log(`   POST /flood-analysis - AI flood risk analysis`);
+  console.log(`   POST /sabah-flood-status - Sabah flood monitoring`);
+  console.log(`   GET  /health - Health check`);
 });
 
-app.listen(3001, () => {
-  console.log('Mock server running on http://localhost:3001');
-});
+export default app;

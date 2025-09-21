@@ -1,168 +1,104 @@
-/**
- * PLEASE IGNORE THIS FILE. THIS IS A TEST OF THE LAMBDA FUNCTION.
- */
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 
-const mysql = require('mysql2/promise');
+const client = new BedrockRuntimeClient({
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
-exports.handler = async (event) => {
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+export const handler = async (event) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
+  try {
+    const { latitude, longitude } = JSON.parse(event.body || '{}');
+    
+    if (!latitude || !longitude) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Latitude and longitude are required' })
+      };
+    }
+
+    // Mock weather and terrain data
+    const weatherData = {
+      temperature: 28 + Math.random() * 5,
+      humidity: 75 + Math.random() * 20,
+      rainfall: Math.random() * 50,
+      windSpeed: 5 + Math.random() * 15,
+      pressure: 1010 + Math.random() * 20
     };
 
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 200, headers, body: '' };
-    }
+    const terrainData = {
+      elevation: Math.random() * 100,
+      soilType: ['clay', 'sandy', 'loamy'][Math.floor(Math.random() * 3)],
+      drainageQuality: ['poor', 'moderate', 'good'][Math.floor(Math.random() * 3)],
+      nearWaterBody: Math.random() > 0.5,
+      urbanization: Math.random() * 100
+    };
 
-    let connection;
+    const prompt = `Analyze flood risk for ${latitude}, ${longitude}:
+
+Weather: ${weatherData.temperature.toFixed(1)}°C, ${weatherData.humidity.toFixed(1)}% humidity, ${weatherData.rainfall.toFixed(1)}mm rain
+Terrain: ${terrainData.elevation.toFixed(1)}m elevation, ${terrainData.soilType} soil, ${terrainData.drainageQuality} drainage
+
+Provide: Risk level, key factors, recommendations. Keep concise.`;
+
+    const command = new InvokeModelCommand({
+      modelId: "amazon.titan-text-express-v1",
+      body: JSON.stringify({
+        inputText: prompt,
+        textGenerationConfig: {
+          maxTokenCount: 300,
+          temperature: 0.3,
+          topP: 0.9,
+        },
+      }),
+    });
+
+    const response = await client.send(command);
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+    const analysis = responseBody.results[0].outputText.trim();
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        analysis,
+        weatherData,
+        terrainData
+      })
+    };
+
+  } catch (error) {
+    console.error('Flood analysis error:', error);
     
-    try {
-        const { latitude, longitude, radius = 10 } = JSON.parse(event.body);
+    const fallbackAnalysis = `Flood Risk Assessment for ${JSON.parse(event.body || '{}').latitude}, ${JSON.parse(event.body || '{}').longitude}:
 
-        // Database connection
-        connection = await mysql.createConnection({
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME,
-            port: process.env.DB_PORT || 3306
-        });
+RISK LEVEL: MODERATE
+- Current weather conditions show standard precipitation
+- Terrain suggests moderate drainage capacity
+- Monitor local alerts and maintain emergency preparedness`;
 
-        // Query flood alerts within radius (km)
-        const [floodAlerts] = await connection.execute(`
-            SELECT 
-                id,
-                location_name,
-                latitude,
-                longitude,
-                severity,
-                alert_type,
-                description,
-                timestamp,
-                active,
-                (6371 * acos(
-                    cos(radians(?)) * cos(radians(latitude)) * 
-                    cos(radians(longitude) - radians(?)) + 
-                    sin(radians(?)) * sin(radians(latitude))
-                )) AS distance_km
-            FROM flood_alerts 
-            WHERE active = 1 
-            HAVING distance_km <= ? 
-            ORDER BY distance_km ASC, severity DESC
-        `, [latitude, longitude, latitude, radius]);
-
-        // Query evacuation points within radius
-        const [evacuationPoints] = await connection.execute(`
-            SELECT 
-                id,
-                name,
-                latitude,
-                longitude,
-                capacity,
-                type,
-                contact_info,
-                (6371 * acos(
-                    cos(radians(?)) * cos(radians(latitude)) * 
-                    cos(radians(longitude) - radians(?)) + 
-                    sin(radians(?)) * sin(radians(latitude))
-                )) AS distance_km
-            FROM evacuation_points 
-            HAVING distance_km <= ? 
-            ORDER BY distance_km ASC
-            LIMIT 5
-        `, [latitude, longitude, latitude, radius * 2]);
-
-        // Calculate risk level
-        const riskLevel = calculateRiskLevel(floodAlerts);
-
-        // Log user location for analytics
-        await connection.execute(`
-            INSERT INTO user_locations (latitude, longitude, timestamp, risk_level) 
-            VALUES (?, ?, NOW(), ?)
-        `, [latitude, longitude, riskLevel]);
-
-        const response = {
-            location: { latitude, longitude },
-            riskLevel,
-            floodAlerts: floodAlerts.map(alert => ({
-                id: alert.id,
-                location: alert.location_name,
-                severity: alert.severity,
-                type: alert.alert_type,
-                description: alert.description,
-                distance: Math.round(alert.distance_km * 100) / 100,
-                timestamp: alert.timestamp
-            })),
-            evacuationPoints: evacuationPoints.map(point => ({
-                id: point.id,
-                name: point.name,
-                coordinates: [point.latitude, point.longitude],
-                capacity: point.capacity,
-                type: point.type,
-                distance: Math.round(point.distance_km * 100) / 100,
-                contact: point.contact_info
-            })),
-            recommendations: generateRecommendations(riskLevel, floodAlerts.length)
-        };
-
-        return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify(response)
-        };
-
-    } catch (error) {
-        console.error('Database error:', error);
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ 
-                error: 'Failed to analyze flood data',
-                message: error.message 
-            })
-        };
-    } finally {
-        if (connection) {
-            await connection.end();
-        }
-    }
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        analysis: fallbackAnalysis,
+        fallback: true
+      })
+    };
+  }
 };
-
-function calculateRiskLevel(alerts) {
-    if (alerts.length === 0) return 'LOW';
-    
-    const highSeverityCount = alerts.filter(a => a.severity === 'HIGH').length;
-    const mediumSeverityCount = alerts.filter(a => a.severity === 'MEDIUM').length;
-    
-    if (highSeverityCount > 0) return 'CRITICAL';
-    if (mediumSeverityCount > 1) return 'HIGH';
-    if (alerts.length > 0) return 'MEDIUM';
-    return 'LOW';
-}
-
-function generateRecommendations(riskLevel, alertCount) {
-    const recommendations = [];
-    
-    switch (riskLevel) {
-        case 'CRITICAL':
-            recommendations.push('EVACUATE IMMEDIATELY to nearest safe location');
-            recommendations.push('Follow official evacuation routes');
-            recommendations.push('Take emergency supplies and important documents');
-            break;
-        case 'HIGH':
-            recommendations.push('Prepare for possible evacuation');
-            recommendations.push('Monitor local emergency broadcasts');
-            recommendations.push('Avoid low-lying areas and flood-prone roads');
-            break;
-        case 'MEDIUM':
-            recommendations.push('Stay alert and monitor weather conditions');
-            recommendations.push('Avoid unnecessary travel in affected areas');
-            break;
-        default:
-            recommendations.push('No immediate flood risk detected');
-            recommendations.push('Continue normal activities with weather awareness');
-    }
-    
-    return recommendations;
-}

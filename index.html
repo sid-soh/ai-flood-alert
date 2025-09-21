@@ -26,6 +26,7 @@
       <button id="nav-btn">Map</button>
       <button id="nav-btn">Call for help</button>
       <button id="nav-btn">News Dashboard</button>
+      <button id="nav-btn">Live Monitor</button>
       <button id="nav-btn">About</button>
       <button id="theme-toggle">Light Mode</button>
     </div>
@@ -41,6 +42,7 @@
           <button class="mobile-nav-btn">Map</button>
           <button class="mobile-nav-btn">Call for help</button>
           <button class="mobile-nav-btn">News Dashboard</button>
+          <button class="mobile-nav-btn">Live Monitor</button>
           <button class="mobile-nav-btn">About</button>
           <button id="mobile-theme-toggle">Light Mode</button>
         </div>
@@ -83,6 +85,9 @@
           } else if (index === 3) { // News Dashboard button
             console.log('Calling showPage(news)');
             window.showPage && window.showPage('news');
+          } else if (index === 4) { // Live Monitor button
+            console.log('Calling showPage(live)');
+            window.showPage && window.showPage('live');
           }
         });
       });
@@ -94,6 +99,8 @@
             window.showPage && window.showPage('map');
           } else if (index === 2) { // News Dashboard button
             window.showPage && window.showPage('news');
+          } else if (index === 3) { // Live Monitor button
+            window.showPage && window.showPage('live');
           }
           closeMobileMenu();
         });
