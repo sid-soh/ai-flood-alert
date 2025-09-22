@@ -1,6 +1,6 @@
 # RapidResponse 🌊
 
-Submission for the Great Malaysia AI Hackathon 2025.
+Submission for the Great Malaysia AI Hackathon 2025. The app is deployed using AWS: https://d2vroldmy7x2vq.cloudfront.net/
 
 An AI-powered flood monitoring and emergency response system for Sabah, Malaysia. RapidResponse provides real-time flood risk assessment, intelligent evacuation routing, and emergency assistance coordination.
 
